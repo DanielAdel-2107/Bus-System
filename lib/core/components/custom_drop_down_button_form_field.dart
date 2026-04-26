@@ -14,6 +14,7 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
     this.fillColor,
     this.itemLabelBuilder,
     this.value,
+    this.primaryColor,
   });
 
   final List<T> items;
@@ -24,6 +25,7 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
   final String? title;
   final Function(T?)? onChanged;
   final Color? fillColor;
+  final Color? primaryColor;
 
   final String Function(T)? itemLabelBuilder;
 
@@ -32,7 +34,7 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (title != null) Text(title!, style: AppTextStyles.title18White70),
+        if (title != null) Text(title!, style: AppTextStyles.title18PrimaryColorW500.copyWith(color: primaryColor)),
         SizedBox(height: SizeConfig.height * 0.003),
         DropdownButtonFormField<T>(
           initialValue: value, // ✅ القيمة المختارة
@@ -44,7 +46,7 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
                     itemLabelBuilder != null
                         ? itemLabelBuilder!(e)
                         : e.toString(),
-                    style: AppTextStyles.title18White70,
+                    style: AppTextStyles.title18Black,
                   ),
                 ),
               )
@@ -56,20 +58,20 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
             if (onChanged != null) onChanged!(val);
           },
           isExpanded: true,
-          iconEnabledColor: AppColors.kPrimaryColor,
-          iconDisabledColor: AppColors.kPrimaryColor,
-          dropdownColor: AppColors.kPrimaryColor,
-          style: AppTextStyles.title18White70,
+          iconEnabledColor: primaryColor ?? AppColors.kPrimaryColor,
+          iconDisabledColor: primaryColor ?? AppColors.kPrimaryColor,
+          dropdownColor: Colors.white,
+          style: AppTextStyles.title18Black,
           decoration: InputDecoration(
             contentPadding: EdgeInsets.symmetric(
               horizontal: SizeConfig.width * 0.04,
               vertical: SizeConfig.height * 0.015,
             ),
-            filled: fillColor != null,
-            fillColor: fillColor,
+            filled: true,
+            fillColor: fillColor ?? Colors.grey.shade50,
             border: buildBorder(),
             enabledBorder: buildBorder(),
-            focusedBorder: buildBorder(),
+            focusedBorder: buildBorder(primaryColor ?? AppColors.kPrimaryColor),
           ),
           hint: Text(
             hintText ?? "Select",
@@ -80,10 +82,13 @@ class CustomDropDownButtonFormField<T> extends StatelessWidget {
     );
   }
 
-  OutlineInputBorder buildBorder() {
+  OutlineInputBorder buildBorder([Color? color]) {
     return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: AppColors.kPrimaryColor),
+      borderRadius: BorderRadius.circular(SizeConfig.width * 0.03),
+      borderSide: BorderSide(
+        color: color ?? Colors.grey.withOpacity(0.15),
+        width: color != null ? 2 : 1.5,
+      ),
     );
   }
 }

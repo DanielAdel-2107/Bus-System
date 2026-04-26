@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'package:bus_system/core/utilies/assets/images/app_images.dart';
+import 'package:bus_system/core/cache/cache_helper.dart';
+import 'package:bus_system/core/di/dependancy_injection.dart';
+import 'package:bus_system/features/auth/sign_in/views/screens/sign_in_screen.dart';
+import 'package:bus_system/features/driver/driver_main/views/screens/driver_main_screen.dart';
 import 'package:bus_system/features/on_boarding/views/screens/on_boarding_screen.dart';
+import 'package:bus_system/features/student/dashboard/views/screens/student_dashboard_screen.dart';
+import 'package:bus_system/features/university/university_home/views/screens/university_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppColors {
   AppColors._();
@@ -24,16 +31,45 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 5), () {
+    _handleNavigation();
+  }
+
+  Future<void> _handleNavigation() async {
+    await Future.delayed(const Duration(seconds: 4));
+
+    if (!mounted) return;
+
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user != null) {
+      // User is logged in, check role
+      final userModel = getIt<CacheHelper>().getUserModel();
+      final role = userModel?.role?.toLowerCase();
+
+      Widget nextScreen;
+
+      if (role == 'admin') {
+        nextScreen = const UniversityDashboardScreen();
+      } else if (role == 'driver') {
+        nextScreen = const DriverMainScreen();
+      } else if (role == 'student') {
+        nextScreen = const StudentDashboardScreen();
+      } else {
+        // Fallback if role is unknown but user exists
+        nextScreen = const SignInScreen();
+      }
+
       Navigator.pushReplacement(
         context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const OnboardingScreen(),
-          transitionsBuilder: (_, animation, __, child) =>
-              FadeTransition(opacity: animation, child: child),
-        ),
+        MaterialPageRoute(builder: (_) => nextScreen),
       );
-    });
+    } else {
+      // User not logged in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+    }
   }
 
   @override

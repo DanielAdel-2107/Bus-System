@@ -6,12 +6,15 @@ class UserModel {
   final String image;
   final DateTime? createdAt;
 
+  final String? role;
+
   UserModel({
     required this.id,
     required this.fullName,
     required this.email,
     required this.phoneNumber,
     required this.image,
+    this.role,
     this.createdAt,
   });
 
@@ -22,6 +25,7 @@ class UserModel {
       email: json['email'] ?? '',
       phoneNumber: json['phone_number'] ?? '',
       image: json['image'] ?? '',
+      role: json['role'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -34,10 +38,11 @@ class UserModel {
         'email': email,
         'phone_number': phoneNumber,
         'image': image,
+        'role': role,
         if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       };
 
   @override
   String toString() =>
-      'User(id: $id, name: $fullName, email: $email, phone: $phoneNumber, image: $image, createdAt: $createdAt)';
+      'User(id: $id, name: $fullName, email: $email, phone: $phoneNumber, image: $image, role: $role, createdAt: $createdAt)';
 }

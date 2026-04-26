@@ -1,6 +1,6 @@
 import 'package:bus_system/core/di/dependancy_injection.dart';
+import 'package:bus_system/core/notifications/local_notifications_services.dart';
 import 'package:flutter/material.dart';
-import 'package:bus_system/core/local_notifications/local_notifications_services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:custom_quick_alert/custom_quick_alert.dart';
@@ -9,6 +9,8 @@ import 'package:bus_system/app/my_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 Future<void> clearOldCacheIfNeeded() async {
   final prefs = await SharedPreferences.getInstance();
@@ -24,10 +26,9 @@ Future<void> clearOldCacheIfNeeded() async {
   }
 }
 
-
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Supabase.initialize(
     url: "https://qzizoqzenmiydusgieha.supabase.co",
     anonKey:
@@ -36,11 +37,6 @@ Future<void> main() async {
   await setupDI();
   await clearOldCacheIfNeeded();
   await LocalNotificationsServices.init();
-  runApp(
-    DevicePreview(
-      enabled: false,
-      builder: (context) => MyApp(),
-    ),
-  );
+  runApp(DevicePreview(enabled: false, builder: (context) => MyApp()));
   CustomQuickAlert.initialize(navigatorKey);
 }

@@ -1,3 +1,6 @@
+import 'package:bus_system/features/auth/sign_up/view_models/sign_up_cubit/sign_up_cubit.dart';
+import 'package:bus_system/features/auth/sign_up/view_models/sign_up_cubit/sign_up_state.dart';
+import 'package:bus_system/core/app_route/route_names.dart';
 import 'package:bus_system/core/utilies/assets/images/app_images.dart';
 import 'package:bus_system/core/utilies/colors/app_colors.dart';
 import 'package:custom_quick_alert/custom_quick_alert.dart';
@@ -7,110 +10,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// افتراض: CustomQuickAlert موجود في مشروعك
-// import 'package:your_project/widgets/custom_quick_alert.dart';   ← عدل المسار حسب مشروعك
-// لو مش موجود، ممكن تستبدله بـ SnackBar أو AlertDialog مؤقتًا
-
-// ──────────────────────────────────────────────
-// Auth Cubit & State
-// ──────────────────────────────────────────────
-
-class AuthState {
-  final bool isLoading;
-  final String? errorMessage;
-  final User? user;
-
-  AuthState({
-    this.isLoading = false,
-    this.errorMessage,
-    this.user,
-  });
-
-  AuthState copyWith({
-    bool? isLoading,
-    String? errorMessage,
-    User? user,
-  }) {
-    return AuthState(
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
-      user: user ?? this.user,
-    );
-  }
-
-  bool get hasError => errorMessage != null && errorMessage!.isNotEmpty;
-  bool get isSuccess => user != null && !isLoading && !hasError;
-}
-
-class AuthCubit extends Cubit<AuthState> {
-  final SupabaseClient supabase;
-
-  AuthCubit(this.supabase) : super(AuthState());
-
-  Future<void> signUpStudent({
-    required String fullName,
-    required String phone,
-    required String email,
-    required String password,
-    required String gender,
-  }) async {
-    emit(state.copyWith(isLoading: true, errorMessage: null));
-
-    try {
-      // 1. Sign up in Auth
-      final response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'full_name': fullName,
-          'phone': phone,
-          'role': 'student',
-        },
-      );
-
-      final user = response.user;
-      if (user == null) {
-        throw Exception('User creation failed');
-      }
-
-      // 2. Insert into profiles
-      await supabase.from('profiles').insert({
-        'id': user.id,
-        'full_name': fullName,
-        'phone': phone,
-        'role': 'student',
-        'gender': gender,
-      });
-
-      // 3. Insert into students
-      await supabase.from('students').insert({
-        'id': user.id,
-        'gender': gender,
-      });
-
-      emit(state.copyWith(isLoading: false, user: user));
-    } on AuthException catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.message));
-    } on PostgrestException catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        errorMessage: e.message ?? 'Database error occurred',
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        errorMessage: 'Unexpected error: $e',
-      ));
-    }
-  }
-}
-
 // ──────────────────────────────────────────────
 // Sign Up Screen
 // ──────────────────────────────────────────────
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final String role;
+
+  const SignUpScreen({super.key, required this.role});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -134,19 +41,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AuthCubit(Supabase.instance.client),
-      child: BlocConsumer<AuthCubit, AuthState>(
+      create: (_) => SignUpCubit(Supabase.instance.client),
+      child: BlocConsumer<SignUpCubit, SignUpState>(
         listener: (context, state) {
           if (state.isLoading) return;
 
           if (state.isSuccess) {
-            CustomQuickAlert.success(
-              message: 'Account created successfully!',
-              title: 'Success',
-              onConfirm: () {
-                Navigator.pop(context); // go back (e.g. to login or previous screen)
-              },
-            );
+            // 1. Navigate first to the respective registration screen
+            if (widget.role.toLowerCase() == 'student') {
+              Navigator.pushReplacementNamed(
+                context,
+                RouteNames.studentRegisterScreen,
+              );
+            } else if (widget.role.toLowerCase() == 'driver') {
+              Navigator.pushReplacementNamed(
+                context,
+                RouteNames.driverRegisterScreen,
+              );
+            }
+
+            // 2. Show the success alert AFTER navigation
+            Future.delayed(const Duration(milliseconds: 500), () {
+              CustomQuickAlert.success(
+                message: 'Account created successfully!',
+                title: 'Success',
+              );
+            });
           }
 
           if (state.hasError) {
@@ -161,34 +81,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
             backgroundColor: AppColors.background,
             body: SafeArea(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 30,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
                       Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.lightBlue.withOpacity(0.3),
-                            width: 14,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryBlue.withOpacity(0.2),
-                              blurRadius: 60,
-                              spreadRadius: 15,
+                            width: 180,
+                            height: 180,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.lightBlue.withOpacity(0.3),
+                                width: 14,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryBlue.withOpacity(0.2),
+                                  blurRadius: 60,
+                                  spreadRadius: 15,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          AppImages.logoImage,
-                          fit: BoxFit.contain,
-                        ),
-                      )
+                            child: Image.asset(
+                              AppImages.logoImage,
+                              fit: BoxFit.contain,
+                            ),
+                          )
                           .animate()
                           .scale(duration: 800.ms, curve: Curves.easeOutBack)
                           .then()
@@ -221,8 +143,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         label: 'Full Name',
                         hint: 'Ahmed Mohamed',
                         icon: Icons.person_rounded,
-                        validator: (v) =>
-                            v?.trim().isEmpty ?? true ? 'Name is required' : null,
+                        validator: (v) => v?.trim().isEmpty ?? true
+                            ? 'Name is required'
+                            : null,
                       ),
 
                       const SizedBox(height: 20),
@@ -235,7 +158,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         icon: Icons.email_rounded,
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Email is required';
+                          if (v == null || v.isEmpty)
+                            return 'Email is required';
                           if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
                             return 'Invalid email format';
                           }
@@ -252,19 +176,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         hint: '01012345678',
                         icon: Icons.phone_rounded,
                         keyboardType: TextInputType.phone,
-                        validator: (v) =>
-                            (v?.length ?? 0) < 10 ? 'Invalid phone number' : null,
+                        validator: (v) => (v?.length ?? 0) < 10
+                            ? 'Invalid phone number'
+                            : null,
                       ),
 
                       const SizedBox(height: 20),
 
                       // Gender
                       DropdownButtonFormField<String>(
-                        value: _selectedGender,
+                        initialValue: _selectedGender,
                         decoration: InputDecoration(
                           labelText: 'Gender',
-                          prefixIcon:
-                              const Icon(Icons.wc, color: AppColors.primaryBlue),
+                          prefixIcon: const Icon(
+                            Icons.wc,
+                            color: AppColors.primaryBlue,
+                          ),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
@@ -274,7 +201,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         items: const [
                           DropdownMenuItem(value: 'male', child: Text('Male')),
-                          DropdownMenuItem(value: 'female', child: Text('Female')),
+                          DropdownMenuItem(
+                            value: 'female',
+                            child: Text('Female'),
+                          ),
                         ],
                         onChanged: (v) => setState(() => _selectedGender = v),
                         validator: (v) =>
@@ -297,8 +227,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 : Icons.visibility,
                             color: AppColors.primaryGreen,
                           ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                         validator: (v) => (v?.length ?? 0) < 6
                             ? 'Password must be at least 6 characters'
@@ -322,7 +253,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             color: AppColors.primaryGreen,
                           ),
                           onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm),
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                         ),
                         validator: (v) {
                           if (v != _passwordController.text) {
@@ -364,7 +296,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             if (!_formKey.currentState!.validate()) return;
                             if (!_acceptTerms) {
                               CustomQuickAlert.warning(
-                                message: 'You must agree to the terms and conditions',
+                                message:
+                                    'You must agree to the terms and conditions',
                                 title: 'Terms Required',
                               );
                               return;
@@ -377,48 +310,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               return;
                             }
 
-                            context.read<AuthCubit>().signUpStudent(
-                                  fullName: _nameController.text.trim(),
-                                  phone: _phoneController.text.trim(),
-                                  email: _emailController.text.trim(),
-                                  password: _passwordController.text,
-                                  gender: _selectedGender!,
-                                );
+                            context.read<SignUpCubit>().signUpUser(
+                              role: widget.role,
+                              fullName: _nameController.text.trim(),
+                              phone: _phoneController.text.trim(),
+                              email: _emailController.text.trim(),
+                              password: _passwordController.text,
+                              gender: _selectedGender!,
+                            );
                           },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  AppColors.primaryBlue,
-                                  AppColors.primaryGreen
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(40),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      AppColors.primaryGreen.withOpacity(0.5),
-                                  blurRadius: 25,
-                                  offset: const Offset(0, 12),
+                          child:
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Create Account 🚀',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      AppColors.primaryBlue,
+                                      AppColors.primaryGreen,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(40),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryGreen.withOpacity(
+                                        0.5,
+                                      ),
+                                      blurRadius: 25,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
                                 ),
+                                child: Center(
+                                  child: Text(
+                                    'Create Account 🚀',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ).animate().scale(
+                                duration: 500.ms,
+                                curve: Curves.elasticOut,
                               ),
-                            ),
-                          ).animate().scale(
-                              duration: 500.ms, curve: Curves.elasticOut),
                         ),
 
                       const SizedBox(height: 30),
@@ -429,7 +369,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           Text(
                             "Already have an account? ",
                             style: GoogleFonts.poppins(
-                                color: AppColors.textSecondary),
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
@@ -483,8 +424,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
           style: GoogleFonts.poppins(),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle:
-                GoogleFonts.poppins(color: AppColors.textSecondary.withOpacity(0.6)),
+            hintStyle: GoogleFonts.poppins(
+              color: AppColors.textSecondary.withOpacity(0.6),
+            ),
             prefixIcon: Icon(icon, color: AppColors.primaryBlue),
             suffixIcon: suffixIcon,
             filled: true,
@@ -495,8 +437,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide:
-                  BorderSide(color: AppColors.lightBlue.withOpacity(0.3)),
+              borderSide: BorderSide(
+                color: AppColors.lightBlue.withOpacity(0.3),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -505,8 +448,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 width: 2,
               ),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 18,
+              horizontal: 20,
+            ),
           ),
         ),
       ],

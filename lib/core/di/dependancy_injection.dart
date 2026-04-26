@@ -1,4 +1,5 @@
 import 'package:bus_system/core/cache/cache_helper.dart';
+import 'package:bus_system/features/settings/view_models/settings_cubit/settings_cubit.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,4 +10,5 @@ Future<void> setupDI() async {
   await cacheHelper.init();
   getIt.registerSingleton<CacheHelper>(cacheHelper);
   getIt.registerLazySingleton(() => Supabase.instance.client);
+  getIt.registerSingleton<SettingsCubit>(SettingsCubit());
 }

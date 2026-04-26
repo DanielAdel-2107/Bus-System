@@ -1,53 +1,47 @@
-// pickup_point_model.dart
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
-class PickupPointModel {
-  final String id;
+class PickupPoint {
   final String name;
-  final String? address;
-  final double latitude;
-  final double longitude;
-  LatLng get position => LatLng(latitude, longitude);
+  final LatLng position;
+  final double distanceKm;
+  final String time;
+  final String busNumber;
+  final String driverName;
+  final bool isNearest;
+  final String driverId;
 
-  // من الـ join مع drivers + profiles
-  final String? busNumber;
-  final String? driverName;
-  final String? driverId;
-
-  // هتتحسب ديناميكيًا أو تجي من الـ backend
-  final double? distanceKm;
-  final String? estimatedTime; // "07:20 AM" أو "in 12 min"
-
-  final bool isNearest; // هتتحدد في الـ UI حسب المسافة
-
-  PickupPointModel({
-    required this.id,
+  const PickupPoint({
     required this.name,
-    this.address,
-    required this.latitude,
-    required this.longitude,
-    this.busNumber,
-    this.driverName,
-    this.driverId,
-    this.distanceKm,
-    this.estimatedTime,
+    required this.position,
+    required this.distanceKm,
+    required this.driverId,
+    required this.time,
+    required this.busNumber,
+    required this.driverName,
     this.isNearest = false,
   });
 
-  String get distanceText => distanceKm != null ? "${distanceKm!.toStringAsFixed(1)} km" : "—";
+  String get distanceText => "${distanceKm.toStringAsFixed(1)} km";
 
-  // Factory من Supabase row
-  factory PickupPointModel.fromJson(Map<String, dynamic> json) {
-    return PickupPointModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      address: json['address'] as String?,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
-      busNumber: json['bus_number'] as String?,
-      driverName: json['full_name'] as String?, // من profiles
-      driverId: json['driver_id'] as String?,
-      // distanceKm & estimatedTime → هتتحسب بعدين
+  PickupPoint copyWith({
+    String? name,
+    LatLng? position,
+    String? driverId,
+    double? distanceKm,
+    String? time,
+    String? busNumber,
+    String? driverName,
+    bool? isNearest,
+  }) {
+    return PickupPoint(
+      name: name ?? this.name,
+      position: position ?? this.position,
+      distanceKm: distanceKm ?? this.distanceKm,
+      time: time ?? this.time,
+      driverId: driverId ?? this.driverId,
+      busNumber: busNumber ?? this.busNumber,
+      driverName: driverName ?? this.driverName,
+      isNearest: isNearest ?? this.isNearest,
     );
   }
 }

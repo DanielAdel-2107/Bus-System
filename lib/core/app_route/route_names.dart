@@ -9,8 +9,12 @@ class RouteNames {
   static const String selectRoleScreen = 'selectRoleScreen';
   // feature/user screens
   static const String dashboardScreen = 'dashboardScreen';
-  static const String riskDetailsScreen = 'riskDetailsScreen';
-  static const String ecgDetailsScreen = 'ecgDetailsScreen';
-  static const String ecgHistoryScreen = 'ecgHistoryScreen';
-  static const String chatbotScreen = 'chatbotScreen';
+  static const String driverRegisterScreen = 'driverRegisterScreen';
+  static const String studentRegisterScreen = 'studentRegisterScreen';
+  static const String driverDashboard = 'driverDashboard';
+  // feature/university screens
+  static const String universityDashboard = 'universityDashboard';
+  static const String managePickups = 'managePickups';
+  static const String driverVerification = 'driverVerification';
+  static const String universityMain = 'universityMain';
 }

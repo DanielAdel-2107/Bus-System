@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingData(
       title: "Smart & Safe Transportation",
       description:
-          "Enjoy organized and reliable school transportation designed for students' safety and comfort.",
+          "Enjoy organized and reliable university transportation designed for students' safety and comfort.",
       lottieAsset: AppLotties.busLottie,
     ),
     OnboardingData(
@@ -79,13 +79,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
+        MaterialPageRoute(builder: (_) => SignInScreen()),
       );
     }
   }
 
   void _skip() {
-    // Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+    );
   }
 
   @override

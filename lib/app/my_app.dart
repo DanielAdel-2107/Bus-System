@@ -1,11 +1,14 @@
-// ignore_for_file: deprecated_member_use
+import 'package:bus_system/core/di/dependancy_injection.dart';
+import 'package:bus_system/core/theme/app_theme.dart';
+import 'package:bus_system/features/settings/view_models/settings_cubit/settings_cubit.dart';
+import 'package:bus_system/features/settings/view_models/settings_cubit/settings_state.dart';
 import 'package:bus_system/features/splash/views/screens/splash_screen.dart';
-import 'package:bus_system/features/student/dashboard/test.dart';
-import 'package:bus_system/features/student/subscriptions/views/screens/subscriptions_screen.dart';
+import 'package:bus_system/features/university/university_home/views/screens/university_dashboard_screen.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:bus_system/core/app_route/app_routes.dart';
 import 'package:bus_system/core/utilies/sizes/sized_config.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -14,19 +17,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        SizeConfig.init(context);
-        return MaterialApp(
-          navigatorKey: navigatorKey,
-          debugShowCheckedModeBanner: false,
-          builder: DevicePreview.appBuilder,
-            useInheritedMediaQuery: true,
-          routes: AppRoutes.routes,
-          // initialRoute: RouteNames.splashScreen,
-          home: SplashScreen(),
-        );
-      },
+    return BlocProvider(
+      create: (context) => getIt<SettingsCubit>(),
+      child: BlocBuilder<SettingsCubit, SettingsState>(
+        builder: (context, state) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              SizeConfig.init(context);
+              return MaterialApp(
+                navigatorKey: navigatorKey,
+                debugShowCheckedModeBanner: false,
+                builder: DevicePreview.appBuilder,
+                debugShowMaterialGrid: false,
+                useInheritedMediaQuery: true,
+                theme: AppTheme.light,
+                darkTheme: AppTheme.dark,
+                themeMode: state.settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                routes: AppRoutes.routes,
+                home: const SplashScreen(),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:bus_system/core/utilies/sizes/sized_config.dart';
 import 'package:bus_system/core/utilies/styles/app_text_styles.dart';
 import 'package:bus_system/features/student/subscriptions/models/subscriptions_plan_screen.dart';
 import 'package:bus_system/features/student/subscriptions/view_models/cubit/subscription_cubit.dart';
+import 'package:bus_system/features/student/subscriptions/views/widgets/payment_method_bottom_sheet.dart';
 import 'package:custom_quick_alert/custom_quick_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -54,6 +55,7 @@ class SubscriptionScreen extends StatelessWidget {
                       final selectedName = _getSelectedPlanName(state);
                       final selectedPlan = AppConstants.subscriptionPlans
                           .firstWhere((p) => p.name == selectedName);
+                      final activeSub = (state is SubscriptionInitial) ? state.activeSubscription : null;
 
                       return SingleChildScrollView(
                         padding: EdgeInsets.symmetric(
@@ -63,6 +65,10 @@ class SubscriptionScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (activeSub != null) ...[
+                              _ActiveSubscriptionCard(activeSub: activeSub),
+                              SizedBox(height: SizeConfig.height * 0.03),
+                            ],
                             Text(
                               "Select the perfect subscription for you",
                               style: AppTextStyles.title22TextPrimaryW600,
@@ -160,8 +166,19 @@ class SubscriptionScreen extends StatelessWidget {
             return StickyPayButton(
               price: selectedPlan.price,
               onTap: () {
-                // يمكن إضافة تأكيد قبل الدفع إذا أردت
-                context.read<SubscriptionCubit>().subscribe(plan: selectedPlan);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) => PaymentMethodBottomSheet(
+                    onPaymentConfirmed: (method) {
+                      context.read<SubscriptionCubit>().subscribe(
+                            plan: selectedPlan,
+                            paymentMethod: method,
+                          );
+                    },
+                  ),
+                );
               },
             );
           },
@@ -179,6 +196,107 @@ class SubscriptionScreen extends StatelessWidget {
 // ──────────────────────────────────────────────
 // باقي الويدجيتس (Header, PlanCard, etc.)
 // ──────────────────────────────────────────────
+
+class _ActiveSubscriptionCard extends StatelessWidget {
+  final Map<String, dynamic> activeSub;
+
+  const _ActiveSubscriptionCard({required this.activeSub});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(SizeConfig.height * 0.024),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(SizeConfig.height * 0.03),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.kPrimaryColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: Offset(0, SizeConfig.height * 0.012),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(SizeConfig.height * 0.01),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.verified_rounded,
+                  color: Colors.white,
+                  size: SizeConfig.height * 0.035,
+                ),
+              ),
+              SizedBox(width: SizeConfig.width * 0.03),
+              Text(
+                "Current Active Plan",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: getResponsiveFontSize(fontSize: 18),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: SizeConfig.height * 0.02),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Type",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: getResponsiveFontSize(fontSize: 14),
+                    ),
+                  ),
+                  Text(
+                    activeSub['type']?.toString() ?? 'Semester',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: getResponsiveFontSize(fontSize: 18),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "Valid Until",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: getResponsiveFontSize(fontSize: 14),
+                    ),
+                  ),
+                  Text(
+                    (activeSub['end_date'] as String?)?.split('T')[0] ?? 'Unknown',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: getResponsiveFontSize(fontSize: 16),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2);
+  }
+}
 
 class SubscriptionHeader extends StatelessWidget {
   const SubscriptionHeader({super.key});

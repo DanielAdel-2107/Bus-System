@@ -9,6 +9,7 @@ import 'package:bus_system/features/auth/sign_in/views/widgets/sign_in_button.da
 import 'package:bus_system/features/auth/sign_in/views/widgets/sign_in_form.dart';
 import 'package:bus_system/features/auth/sign_in/views/widgets/sign_in_header.dart';
 import 'package:bus_system/features/auth/sign_in/views/widgets/wave_lottie.dart';
+import 'package:bus_system/features/university/university_home/views/screens/university_dashboard_screen.dart';
 import 'package:bus_system/features/auth/sign_up/views/widgets/gradient_background.dart';
 import 'package:bus_system/features/auth/sign_up/views/widgets/have_account_or_not.dart';
 
@@ -27,6 +28,16 @@ class SignInScreenBody extends StatelessWidget {
             message: 'You have signed in successfully!',
             animationType: CustomQuickAlertAnimationType.slideInDown,
           );
+          
+          if (state.role == 'admin') {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const UniversityDashboardScreen(),
+              ),
+              (route) => false,
+            );
+          }
         }
         if (state is SignInFailure) {
           CustomQuickAlert.error(

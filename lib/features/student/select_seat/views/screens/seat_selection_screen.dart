@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bus_system/core/helper/get_responsive_font_size.dart';
 import 'package:bus_system/core/utilies/assets/lotties/app_lotties.dart';
 import 'package:bus_system/core/utilies/colors/app_colors.dart';
@@ -9,6 +11,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:bus_system/core/notifications/fcm_notification.dart';
+import 'package:bus_system/app/my_app.dart';
 
 ////////////////////////////////////////////////////////////////////////////////
 // Seat Model
@@ -36,7 +40,9 @@ class Seat {
   Color get color {
     if (status == 'driver') return AppColors.primaryBlue;
     if (isTaken) {
-      return studentGender == 'male' ? AppColors.maleSeat : AppColors.femaleSeat;
+      return studentGender?.toLowerCase() == 'male'
+          ? AppColors.maleSeat
+          : AppColors.femaleSeat;
     }
     return isSelected ? AppColors.selectedSeat : AppColors.availableSeat;
   }
@@ -81,14 +87,14 @@ class SeatSelectionCubit extends Cubit<SeatState> {
   Future<void> loadSeats(String driverId) async {
     _driverId = driverId;
     emit(SeatLoading());
-
+    log(driverId);
     try {
       final response = await Supabase.instance.client
           .from('driver_seat_status')
           .select('seat_number, student_gender, is_taken')
           .eq('driver_id', driverId)
           .order('seat_number');
-
+      log(response.toString());
       List<Seat> loadedSeats = response.map((row) {
         return Seat(
           number: row['seat_number'] as int,
@@ -123,19 +129,26 @@ class SeatSelectionCubit extends Cubit<SeatState> {
     seat.isSelected = !seat.isSelected;
     _selectedSeat = seat.isSelected ? number : null;
 
-    emit(SeatLoaded(List.from(current.seats), selectedSeatNumber: _selectedSeat));
+    emit(
+      SeatLoaded(List.from(current.seats), selectedSeatNumber: _selectedSeat),
+    );
   }
 
   void changeDate(DateTime newDate) {
     _selectedDate = newDate;
     if (state is SeatLoaded) {
-      emit(SeatLoaded(List.from((state as SeatLoaded).seats),
-          selectedSeatNumber: _selectedSeat));
+      emit(
+        SeatLoaded(
+          List.from((state as SeatLoaded).seats),
+          selectedSeatNumber: _selectedSeat,
+        ),
+      );
     }
   }
 
   Future<void> confirmBooking() async {
-    if (_selectedSeat == null || _driverId == null || state is! SeatLoaded) return;
+    if (_selectedSeat == null || _driverId == null || state is! SeatLoaded)
+      return;
 
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -146,11 +159,12 @@ class SeatSelectionCubit extends Cubit<SeatState> {
     try {
       final profile = await Supabase.instance.client
           .from('profiles')
-          .select('gender')
+          .select('gender, full_name')
           .eq('id', user.id)
           .maybeSingle();
 
-      final gender = profile?['gender'] as String? ?? 'male';
+      final gender = (profile?['gender'] as String? ?? 'male').toLowerCase();
+      final studentName = profile?['full_name'] as String? ?? 'A student';
 
       await Supabase.instance.client.from('bookings').insert({
         'student_id': user.id,
@@ -160,6 +174,14 @@ class SeatSelectionCubit extends Cubit<SeatState> {
         'booking_date': _selectedDate.toIso8601String(),
         'status': 'booked',
       });
+
+      // Send Notification to Driver
+      await NotificationsHelper().sendNotificationToUser(
+        _driverId!,
+        title: "New Seat Booking",
+        body: "$studentName has booked seat number $_selectedSeat on your bus.",
+        type: "service_request",
+      );
 
       emit(SeatBookingSuccess(_selectedSeat!));
       await loadSeats(_driverId!);
@@ -200,7 +222,22 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
               DatePickerSection(),
               SeatLegend(),
               Expanded(
-                child: BlocBuilder<SeatSelectionCubit, SeatState>(
+                child: BlocConsumer<SeatSelectionCubit, SeatState>(
+                  listener: (context, state) {
+                    if (state is SeatBookingSuccess) {
+                      Navigator.pop(context); // Close the seat_selection screen
+                      // Use a slight delay or post-frame callback if using the global navigator
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        showDialog(
+                          context: navigatorKey.currentContext!,
+                          barrierDismissible: false,
+                          builder: (_) => BookingSuccessDialog(
+                            seatId: state.seatNumber.toString(),
+                          ),
+                        );
+                      });
+                    }
+                  },
                   builder: (context, state) {
                     if (state is SeatLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -212,21 +249,10 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
                       return SeatMapContainer(
                         seats: state.seats,
                         selectedSeatNumber: state.selectedSeatNumber,
-                        onSeatTapped: context.read<SeatSelectionCubit>().selectSeat,
+                        onSeatTapped: context
+                            .read<SeatSelectionCubit>()
+                            .selectSeat,
                       );
-                    }
-                    if (state is SeatBookingSuccess) {
-                      Navigator.pop(context); // Close the seat selection screen
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) => BookingSuccessDialog(
-                            seatId: state.seatNumber.toString(),
-                          ),
-                        );
-                      });
-                      return const SizedBox();
                     }
                     return const SizedBox();
                   },
@@ -234,11 +260,15 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
               ),
               BlocBuilder<SeatSelectionCubit, SeatState>(
                 builder: (context, state) {
-                  final selected = state is SeatLoaded ? state.selectedSeatNumber : null;
+                  final selected = state is SeatLoaded
+                      ? state.selectedSeatNumber
+                      : null;
                   return BottomActionBar(
                     selectedSeatId: selected?.toString(),
                     onConfirm: selected != null
-                        ? () => context.read<SeatSelectionCubit>().confirmBooking()
+                        ? () => context
+                              .read<SeatSelectionCubit>()
+                              .confirmBooking()
                         : null,
                   );
                 },
@@ -281,7 +311,10 @@ class DatePickerSection extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(h * 0.02),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: w * 0.04, vertical: h * 0.015),
+          padding: EdgeInsets.symmetric(
+            horizontal: w * 0.04,
+            vertical: h * 0.015,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(h * 0.02),
@@ -292,8 +325,11 @@ class DatePickerSection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded,
-                      color: AppColors.kPrimaryColor, size: h * 0.028),
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    color: AppColors.kPrimaryColor,
+                    size: h * 0.028,
+                  ),
                   SizedBox(width: w * 0.03),
                   Text(
                     "Trip Date: ${DateFormat('MMM d, yyyy').format(cubit.selectedDate)}",
@@ -301,8 +337,11 @@ class DatePickerSection extends StatelessWidget {
                   ),
                 ],
               ),
-              Icon(Icons.arrow_drop_down_rounded,
-                  color: AppColors.kPrimaryColor, size: h * 0.035),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                color: AppColors.kPrimaryColor,
+                size: h * 0.035,
+              ),
             ],
           ),
         ),
@@ -358,13 +397,20 @@ class BusHeader extends StatelessWidget {
                   ],
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.arrow_back_rounded, size: h * 0.035, color: AppColors.primaryBlue),
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    size: h * 0.035,
+                    color: AppColors.primaryBlue,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
               const Spacer(),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: w * 0.04, vertical: h * 0.012),
+                padding: EdgeInsets.symmetric(
+                  horizontal: w * 0.04,
+                  vertical: h * 0.012,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.kPrimaryColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(h * 0.04),
@@ -372,9 +418,16 @@ class BusHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: h * 0.022, color: AppColors.kPrimaryColor),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: h * 0.022,
+                      color: AppColors.kPrimaryColor,
+                    ),
                     SizedBox(width: w * 0.02),
-                    Text("Today • 07:20 AM", style: AppTextStyles.title15PrimaryW600),
+                    Text(
+                      "Today • 07:20 AM",
+                      style: AppTextStyles.title15PrimaryW600,
+                    ),
                   ],
                 ),
               ),
@@ -390,16 +443,23 @@ class BusHeader extends StatelessWidget {
                   color: AppColors.kPrimaryColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(h * 0.02),
                 ),
-                child: Icon(Icons.directions_bus_filled_rounded, color: AppColors.kPrimaryColor, size: h * 0.04),
+                child: Icon(
+                  Icons.directions_bus_filled_rounded,
+                  color: AppColors.kPrimaryColor,
+                  size: h * 0.04,
+                ),
               ),
               SizedBox(width: w * 0.04),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Bus 12", style: AppTextStyles.title28PrimaryBold),
+                    Text("Bus 15", style: AppTextStyles.title28PrimaryBold),
                     SizedBox(height: h * 0.005),
-                    Text("Nasr City → Al-Noor School", style: AppTextStyles.title15SecondaryW500),
+                    Text(
+                      "Nasr City → Al-Noor School",
+                      style: AppTextStyles.title15SecondaryW500,
+                    ),
                   ],
                 ),
               ),
@@ -497,7 +557,11 @@ class SeatMapContainer extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(h * 0.04),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 22, offset: Offset(0, h * 0.01)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 22,
+            offset: Offset(0, h * 0.01),
+          ),
         ],
       ),
       child: Column(
@@ -539,7 +603,8 @@ class _SeatsLayout extends StatelessWidget {
     final h = SizeConfig.height;
     final w = SizeConfig.width;
 
-    final sortedSeats = List<Seat>.from(seats)..sort((a, b) => a.number.compareTo(b.number));
+    final sortedSeats = List<Seat>.from(seats)
+      ..sort((a, b) => a.number.compareTo(b.number));
 
     return Column(
       children: [
@@ -554,19 +619,29 @@ class _SeatsLayout extends StatelessWidget {
               Container(
                 width: h * 0.095,
                 height: h * 0.095,
-                margin: EdgeInsets.only(left: w * 0.08), // مسافة من الحافة الشمال
+                margin: EdgeInsets.only(
+                  left: w * 0.08,
+                ), // مسافة من الحافة الشمال
                 decoration: BoxDecoration(
                   color: AppColors.primaryBlue,
                   borderRadius: BorderRadius.circular(h * 0.025),
                   boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, h * 0.007)),
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 12,
+                      offset: Offset(0, h * 0.007),
+                    ),
                   ],
                 ),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.directions_bus_rounded, color: Colors.white, size: h * 0.045),
+                      Icon(
+                        Icons.directions_bus_rounded,
+                        color: Colors.white,
+                        size: h * 0.045,
+                      ),
                       SizedBox(height: h * 0.007),
                       Text("Driver", style: AppTextStyles.title13WhiteW600),
                     ],
@@ -576,13 +651,29 @@ class _SeatsLayout extends StatelessWidget {
 
               // مسافة كبيرة بين السواق والكرسي الوحيد
               SizedBox(width: w * 0.35), // ← هنا المسافة الكبيرة اللي طلبتها
-
               // الكرسي الوحيد على اليمين
               if (sortedSeats.length > 1)
                 _SeatWidget(
-                  seat: sortedSeats.firstWhere((s) => s.number > 1, orElse: () => Seat(number: 2, isTaken: false)),
-                  isSelected: selectedSeatNumber == sortedSeats.firstWhere((s) => s.number > 1, orElse: () => Seat(number: 2, isTaken: false)).number,
-                  onTap: () => onSeatTapped(sortedSeats.firstWhere((s) => s.number > 1, orElse: () => Seat(number: 2, isTaken: false)).number),
+                  seat: sortedSeats.firstWhere(
+                    (s) => s.number > 1,
+                    orElse: () => Seat(number: 2, isTaken: false),
+                  ),
+                  isSelected:
+                      selectedSeatNumber ==
+                      sortedSeats
+                          .firstWhere(
+                            (s) => s.number > 1,
+                            orElse: () => Seat(number: 2, isTaken: false),
+                          )
+                          .number,
+                  onTap: () => onSeatTapped(
+                    sortedSeats
+                        .firstWhere(
+                          (s) => s.number > 1,
+                          orElse: () => Seat(number: 2, isTaken: false),
+                        )
+                        .number,
+                  ),
                   isWindow: true,
                 ),
             ],
@@ -650,43 +741,68 @@ class _SeatWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: seat.status == 'available' ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 260),
-        width: w * 0.18,
-        height: h * 0.095,
-        margin: EdgeInsets.symmetric(horizontal: w * 0.008),
-        decoration: BoxDecoration(
-          color: seat.color,
-          borderRadius: BorderRadius.circular(h * 0.025),
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.transparent,
-            width: isSelected ? 4 : 0,
-          ),
-          boxShadow: isSelected
-              ? [BoxShadow(color: AppColors.kPrimaryColor.withOpacity(0.4), blurRadius: 16, spreadRadius: 2)]
-              : [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: Offset(0, h * 0.005))],
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                seat.number.toString(),
-                style: AppTextStyles.title17BlackW700?.copyWith(
-                  color: (seat.status == 'available' || isSelected) ? Colors.black87 : Colors.white,
+      child:
+          AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                width: w * 0.18,
+                height: h * 0.095,
+                margin: EdgeInsets.symmetric(horizontal: w * 0.008),
+                decoration: BoxDecoration(
+                  color: seat.color,
+                  borderRadius: BorderRadius.circular(h * 0.025),
+                  border: Border.all(
+                    color: isSelected ? Colors.white : Colors.transparent,
+                    width: isSelected ? 4 : 0,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.kPrimaryColor.withOpacity(0.4),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: Offset(0, h * 0.005),
+                          ),
+                        ],
                 ),
-              ),
-              if (isSelected)
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: h * 0.03),
-              if (isWindow && seat.status == 'available' && !isSelected)
-                Padding(
-                  padding: EdgeInsets.only(top: h * 0.005),
-                  child: Icon(Icons.sensor_window_outlined, size: h * 0.022, color: Colors.grey[600]),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        seat.number.toString(),
+                        style: AppTextStyles.title17BlackW700.copyWith(
+                          color: (seat.status == 'available' || isSelected)
+                              ? Colors.black87
+                              : Colors.white,
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: h * 0.03,
+                        ),
+                      if (isWindow && seat.status == 'available' && !isSelected)
+                        Padding(
+                          padding: EdgeInsets.only(top: h * 0.005),
+                          child: Icon(
+                            Icons.sensor_window_outlined,
+                            size: h * 0.022,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-            ],
-          ),
-        ),
-      ).animate(target: isSelected ? 1 : 0).scale(begin: const Offset(0.90, 0.90), duration: 300.ms),
+              )
+              .animate(target: isSelected ? 1 : 0)
+              .scale(begin: const Offset(0.90, 0.90), duration: 300.ms),
     );
   }
 }
@@ -824,8 +940,13 @@ class BookingSuccessDialog extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.kPrimaryColor,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: h * 0.08, vertical: h * 0.022),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(h * 0.05)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: h * 0.08,
+                    vertical: h * 0.022,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(h * 0.05),
+                  ),
                   elevation: 4,
                 ),
                 child: Text("Done", style: AppTextStyles.title18WhiteW600),
@@ -837,61 +958,3 @@ class BookingSuccessDialog extends StatelessWidget {
     );
   }
 }
-// ──────────────────────────────────────────────
-// Date Picker Section
-// ──────────────────────────────────────────────
-
-class _DatePickerSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final h = SizeConfig.height;
-    final w = SizeConfig.width;
-    final cubit = context.read<SeatSelectionCubit>();
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: w * 0.05, vertical: h * 0.015),
-      child: InkWell(
-        onTap: () async {
-          final DateTime? picked = await showDatePicker(
-            context: context,
-            initialDate: cubit.selectedDate,
-            firstDate: DateTime.now(),
-            lastDate: DateTime.now().add(const Duration(days: 30)),
-          );
-
-          if (picked != null && picked != cubit.selectedDate) {
-            cubit.changeDate(picked);
-          }
-        },
-        borderRadius: BorderRadius.circular(h * 0.02),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: w * 0.04, vertical: h * 0.015),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(h * 0.02),
-            border: Border.all(color: AppColors.kPrimaryColor.withOpacity(0.3)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_rounded,
-                      color: AppColors.kPrimaryColor, size: h * 0.028),
-                  SizedBox(width: w * 0.03),
-                  Text(
-                    "Trip Date: ${DateFormat('EEEE, MMM d, yyyy').format(cubit.selectedDate)}",
-                    style: AppTextStyles.title16PrimaryW600,
-                  ),
-                ],
-              ),
-              Icon(Icons.arrow_drop_down_rounded,
-                  color: AppColors.kPrimaryColor, size: h * 0.035),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-

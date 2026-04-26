@@ -37,16 +37,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     {
       'role': 'Student',
       'title': 'I\'m a Student',
-      'desc': 'Track your bus live and enjoy safe school trips.',
+      'desc': 'Track your bus live and enjoy safe university trips.',
       'icon': Icons.person_rounded,
       'color': AppColors.accentBlue,
-    },
-    {
-      'role': 'School',
-      'title': 'I\'m a School',
-      'desc': 'Manage all buses, drivers, and students from one dashboard.',
-      'icon': Icons.school_rounded,
-      'color': AppColors.primaryBlue,
     },
   ];
 
@@ -54,7 +47,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     if (selectedRole != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const SignUpScreen()),
+        MaterialPageRoute(
+          builder: (_) => SignUpScreen(role: selectedRole!.toLowerCase()),
+        ),
       );
     }
   }

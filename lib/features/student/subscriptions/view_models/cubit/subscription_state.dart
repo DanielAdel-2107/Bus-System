@@ -9,11 +9,15 @@ sealed class SubscriptionState extends Equatable {
 
 class SubscriptionInitial extends SubscriptionState {
   final String selectedPlanName;
+  final Map<String, dynamic>? activeSubscription;
 
-  const SubscriptionInitial({required this.selectedPlanName});
+  const SubscriptionInitial({
+    required this.selectedPlanName,
+    this.activeSubscription,
+  });
 
   @override
-  List<Object?> get props => [selectedPlanName];
+  List<Object?> get props => [selectedPlanName, activeSubscription];
 }
 
 class SubscriptionLoading extends SubscriptionState {

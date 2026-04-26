@@ -8,7 +8,8 @@ class CustomTextFormFieldWithTitle extends StatefulWidget {
     super.key,
     this.onChanged,
     this.enable = true,
-    required this.labelText,
+    this.labelText,
+    this.hintText,
     this.title,
     this.isPassword = false,
     this.controller,
@@ -16,8 +17,10 @@ class CustomTextFormFieldWithTitle extends StatefulWidget {
     this.maxLines = 1,
     this.prefixIcon,
     this.keyboardType,
+    this.primaryColor,
   });
-  final String labelText;
+  final String? labelText;
+  final String? hintText;
   final String? title;
   final TextInputType? keyboardType;
   final bool isPassword, enableValidator;
@@ -25,6 +28,7 @@ class CustomTextFormFieldWithTitle extends StatefulWidget {
   final int maxLines;
   final bool? enable;
   final IconData? prefixIcon;
+  final Color? primaryColor;
   final Function(String)? onChanged;
   @override
   State<CustomTextFormFieldWithTitle> createState() =>
@@ -40,38 +44,50 @@ class _CustomTextFormFieldWithTitleState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         widget.title == null
-            ? SizedBox()
-            : Text(widget.title!, style: AppTextStyles.title18PrimaryColorW500),
+            ? const SizedBox()
+            : Text(
+                widget.title!,
+                style: AppTextStyles.title18PrimaryColorW500.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
         SizedBox(height: SizeConfig.height * 0.003),
         TextFormField(
           style: AppTextStyles.title18Black,
           enabled: widget.enable,
-          cursorColor: AppColors.kPrimaryColor,
+          cursorColor: widget.primaryColor ?? AppColors.primaryBlue,
           controller: widget.controller,
           onChanged: widget.onChanged,
           validator: widget.enableValidator
-              ? (value) =>
-                  value!.isEmpty ? "Field ${widget.title} is required" : null
+              ? (value) => value!.isEmpty
+                    ? "Field ${widget.title ?? ''} is required"
+                    : null
               : null,
           obscureText: widget.isPassword ? isPassword : false,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           keyboardType: widget.keyboardType,
           decoration: InputDecoration(
             labelText: widget.labelText,
+            hintText: widget.hintText,
             filled: true,
             fillColor: Colors.grey.shade50,
             contentPadding: EdgeInsets.symmetric(
-                horizontal: SizeConfig.width * 0.04,
-                vertical: SizeConfig.height * 0.0175),
+              horizontal: SizeConfig.width * 0.04,
+              vertical: SizeConfig.height * 0.0175,
+            ),
             prefixIcon: widget.prefixIcon == null
                 ? null
-                : Icon(widget.prefixIcon,
-                    color: AppColors.kPrimaryColor,
-                    size: SizeConfig.width * 0.07),
+                : Icon(
+                    widget.prefixIcon,
+                    color: widget.primaryColor ?? AppColors.kPrimaryColor,
+                    size: SizeConfig.width * 0.07,
+                  ),
             hintStyle: AppTextStyles.title16Grey,
             border: buildBorder(),
             enabledBorder: buildBorder(),
-            focusedBorder: buildBorder(),
+            focusedBorder: buildBorder(
+              widget.primaryColor ?? AppColors.kPrimaryColor,
+            ),
             disabledBorder: buildBorder(),
             suffixIcon: widget.isPassword
                 ? IconButton(
@@ -82,7 +98,7 @@ class _CustomTextFormFieldWithTitleState
                     },
                     icon: Icon(
                       isPassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.kPrimaryColor,
+                      color: widget.primaryColor ?? AppColors.kPrimaryColor,
                     ),
                   )
                 : null,
@@ -93,11 +109,15 @@ class _CustomTextFormFieldWithTitleState
     );
   }
 
-  OutlineInputBorder buildBorder() {
+  OutlineInputBorder buildBorder([Color? color]) {
     return OutlineInputBorder(
-      borderRadius:
-          BorderRadius.circular(SizeConfig.width * 0.03), // 3% من العرض
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(
+        SizeConfig.width * 0.03,
+      ), // 3% من العرض
+      borderSide: BorderSide(
+        color: color ?? Colors.grey.withOpacity(0.15),
+        width: color != null ? 2 : 1.5,
+      ),
     );
   }
 }
