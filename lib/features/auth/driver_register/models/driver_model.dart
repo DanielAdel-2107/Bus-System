@@ -3,7 +3,6 @@ class DriverModel {
   final String licenseNumber;
   final String busNumber;
   final int totalSeats;
-  final String? pickupPointId;
   final bool isVerified;
 
   DriverModel({
@@ -11,7 +10,6 @@ class DriverModel {
     required this.licenseNumber,
     required this.busNumber,
     required this.totalSeats,
-    this.pickupPointId,
     this.isVerified = false,
   });
 
@@ -21,7 +19,6 @@ class DriverModel {
       licenseNumber: json['license_number'],
       busNumber: json['bus_number'],
       totalSeats: json['total_seats'],
-      pickupPointId: json['pickup_point_id'],
       isVerified: json['is_verified'] ?? false,
     );
   }
@@ -32,7 +29,6 @@ class DriverModel {
       'license_number': licenseNumber,
       'bus_number': busNumber,
       'total_seats': totalSeats,
-      'pickup_point_id': pickupPointId,
       'is_verified': isVerified,
     };
   }

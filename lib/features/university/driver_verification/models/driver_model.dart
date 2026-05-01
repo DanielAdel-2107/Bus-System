@@ -9,6 +9,9 @@ class Driver extends Equatable {
   final int? totalSeats;
   final bool isVerified;
   final String status; // 'pending', 'accepted', 'rejected'
+  final String? lineName;
+  final String? pickupPointId;
+  final String? pickupPointName;
   final DateTime? createdAt;
 
   const Driver({
@@ -20,6 +23,9 @@ class Driver extends Equatable {
     this.totalSeats,
     required this.isVerified,
     required this.status,
+    this.lineName,
+    this.pickupPointId,
+    this.pickupPointName,
     this.createdAt,
   });
 
@@ -33,6 +39,9 @@ class Driver extends Equatable {
         totalSeats,
         isVerified,
         status,
+        lineName,
+        pickupPointId,
+        pickupPointName,
         createdAt,
       ];
 
@@ -45,6 +54,9 @@ class Driver extends Equatable {
     int? totalSeats,
     bool? isVerified,
     String? status,
+    String? lineName,
+    String? pickupPointId,
+    String? pickupPointName,
     DateTime? createdAt,
   }) {
     return Driver(
@@ -56,6 +68,9 @@ class Driver extends Equatable {
       totalSeats: totalSeats ?? this.totalSeats,
       isVerified: isVerified ?? this.isVerified,
       status: status ?? this.status,
+      lineName: lineName ?? this.lineName,
+      pickupPointId: pickupPointId ?? this.pickupPointId,
+      pickupPointName: pickupPointName ?? this.pickupPointName,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -73,6 +88,9 @@ class Driver extends Equatable {
       totalSeats: map['total_seats'] as int?,
       isVerified: map['is_verified'] as bool? ?? false,
       status: map['status'] as String? ?? 'pending',
+      lineName: map['line_name'] as String?,
+      pickupPointId: map['pickup_point_id'] as String?,
+      pickupPointName: map['pickup_point_name'] as String?,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
           : null,

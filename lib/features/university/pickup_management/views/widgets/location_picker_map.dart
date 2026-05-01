@@ -80,7 +80,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en',
+                subdomains: const ['0', '1', '2', '3'],
                 userAgentPackageName: 'com.example.bus_system',
               ),
               if (_selectedLocation != null)

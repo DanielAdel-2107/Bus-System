@@ -23,6 +23,9 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
   late TextEditingController _addressController;
   double? _latitude;
   double? _longitude;
+  String? _selectedLine;
+
+  final List<String> _lines = ['Mokattam', 'Nasr City', '6 October'];
 
   @override
   void initState() {
@@ -32,6 +35,7 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
         TextEditingController(text: widget.pickup?.address ?? '');
     _latitude = widget.pickup?.latitude;
     _longitude = widget.pickup?.longitude;
+    _selectedLine = widget.pickup?.lineName;
   }
 
   @override
@@ -87,112 +91,177 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Center(
-            child: Container(
-              width: 60,
-              height: 6,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(10),
+            Center(
+              child: Container(
+                width: 60,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-          ),
-          SizedBox(height: SizeConfig.height * 0.04),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+            SizedBox(height: SizeConfig.height * 0.04),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.kPrimaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    widget.pickup == null
+                        ? Icons.add_location_rounded
+                        : Icons.edit_location_rounded,
+                    color: AppColors.kPrimaryColor,
+                    size: 28,
+                  ),
                 ),
-                child: Icon(
-                  widget.pickup == null
-                      ? Icons.add_location_rounded
-                      : Icons.edit_location_rounded,
-                  color: AppColors.kPrimaryColor,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.pickup == null ? 'New Point' : 'Update Point',
-                      style: TextStyle(
-                        fontSize: getResponsiveFontSize(fontSize: 24),
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.5,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.pickup == null ? 'New Point' : 'Update Point',
+                        style: TextStyle(
+                          fontSize: getResponsiveFontSize(fontSize: 24),
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
+                      Text(
+                        'Provide location details below',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: SizeConfig.height * 0.04),
+            _buildLineSelection(),
+            SizedBox(height: SizeConfig.height * 0.025),
+            _buildCreativeTextField(
+              label: 'Hub Name',
+              controller: _nameController,
+              hint: 'e.g. Science Building North',
+              icon: Icons.business_rounded,
+            ),
+            SizedBox(height: SizeConfig.height * 0.025),
+            _buildLocationSection(),
+            SizedBox(height: SizeConfig.height * 0.025),
+            _buildCreativeTextField(
+              label: 'Full Address / Landmarks',
+              controller: _addressController,
+              hint: 'e.g. Near the main gate fountain',
+              maxLines: 2,
+              icon: Icons.location_on_rounded,
+            ),
+            SizedBox(height: SizeConfig.height * 0.05),
+            SizedBox(
+              width: double.infinity,
+              height: 65,
+              child: ElevatedButton(
+                onPressed: _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.kPrimaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22)),
+                  elevation: 12,
+                  shadowColor: AppColors.kPrimaryColor.withOpacity(0.4),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(widget.pickup == null
+                        ? Icons.add_rounded
+                        : Icons.save_rounded),
+                    const SizedBox(width: 8),
                     Text(
-                      'Provide location details below',
+                      widget.pickup == null
+                          ? 'Create Location'
+                          : 'Save Changes',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
+                        fontSize: getResponsiveFontSize(fontSize: 18),
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            )
+                .animate()
+                .slideY(begin: 0.2, duration: 400.ms, curve: Curves.easeOutQuad)
+                .fadeIn(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLineSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Bus Line',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.grey.shade700,
+              letterSpacing: 0.2,
+            ),
           ),
-          SizedBox(height: SizeConfig.height * 0.04),
-          _buildCreativeTextField(
-            label: 'Hub Name',
-            controller: _nameController,
-            hint: 'e.g. Science Building North',
-            icon: Icons.business_rounded,
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade100, width: 1),
           ),
-          SizedBox(height: SizeConfig.height * 0.025),
-          _buildLocationSection(),
-          SizedBox(height: SizeConfig.height * 0.025),
-          _buildCreativeTextField(
-            label: 'Full Address / Landmarks',
-            controller: _addressController,
-            hint: 'e.g. Near the main gate fountain',
-            maxLines: 2,
-            icon: Icons.location_on_rounded,
-          ),
-          SizedBox(height: SizeConfig.height * 0.05),
-          SizedBox(
-            width: double.infinity,
-            height: 65,
-            child: ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.kPrimaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22)),
-                elevation: 12,
-                shadowColor: AppColors.kPrimaryColor.withOpacity(0.4),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedLine,
+              isExpanded: true,
+              hint: Text(
+                'Select Bus Line',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(widget.pickup == null
-                      ? Icons.add_rounded
-                      : Icons.save_rounded),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.pickup == null ? 'Create Location' : 'Save Changes',
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.kPrimaryColor),
+              items: _lines.map((String line) {
+                return DropdownMenuItem<String>(
+                  value: line,
+                  child: Text(
+                    '$line Line',
                     style: TextStyle(
-                      fontSize: getResponsiveFontSize(fontSize: 18),
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
                     ),
                   ),
-                ],
-              ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedLine = newValue;
+                });
+              },
             ),
-          ).animate().slideY(begin: 0.2, duration: 400.ms, curve: Curves.easeOutQuad).fadeIn(),
-        ],
-      ),
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -223,7 +292,8 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
             ),
             child: Row(
               children: [
-                Icon(Icons.map_rounded, color: AppColors.kPrimaryColor, size: 20),
+                Icon(Icons.map_rounded,
+                    color: AppColors.kPrimaryColor, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -308,13 +378,18 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
     final name = _nameController.text;
     final address = _addressController.text;
 
-    if (name.isNotEmpty && _latitude != null && _longitude != null && address.isNotEmpty) {
+    if (name.isNotEmpty &&
+        _latitude != null &&
+        _longitude != null &&
+        address.isNotEmpty &&
+        _selectedLine != null) {
       if (widget.pickup == null) {
         context.read<ManagePickupCubit>().addPickup(PickupPoint(
               name: name,
               latitude: _latitude!,
               longitude: _longitude!,
               address: address,
+              lineName: _selectedLine,
             ));
       } else {
         context.read<ManagePickupCubit>().updatePickup(widget.pickup!.copyWith(
@@ -322,6 +397,7 @@ class _AddEditPickupSheetState extends State<AddEditPickupSheet> {
               latitude: _latitude!,
               longitude: _longitude!,
               address: address,
+              lineName: _selectedLine,
             ));
       }
       Navigator.pop(context);

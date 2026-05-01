@@ -35,6 +35,7 @@ class ManagePickupCubit extends Cubit<ManagePickupState> {
   }
 
   Future<void> addPickup(PickupPoint pickup) async {
+    emit(ManagePickupActionLoading());
     try {
       // Ensure created_by is set to current user if available
       final userId = supabase.auth.currentUser?.id;
@@ -44,23 +45,28 @@ class ManagePickupCubit extends Cubit<ManagePickupState> {
       }
       
       await addData(tableName: _tableName, data: pickupData);
+      emit(const ManagePickupActionSuccess('Pickup point added successfully!'));
     } catch (e) {
       emit(ManagePickupError(e.toString()));
     }
   }
 
   Future<void> updatePickup(PickupPoint pickup) async {
+    emit(ManagePickupActionLoading());
     try {
       if (pickup.id == null) return;
       await addData(tableName: _tableName, data: pickup.toMap());
+      emit(const ManagePickupActionSuccess('Pickup point updated successfully!'));
     } catch (e) {
       emit(ManagePickupError(e.toString()));
     }
   }
 
   Future<void> deletePickup(String id) async {
+    emit(ManagePickupActionLoading());
     try {
       await removeData(tableName: _tableName, data: {'id': id});
+      emit(const ManagePickupActionSuccess('Pickup point removed successfully!'));
     } catch (e) {
       emit(ManagePickupError(e.toString()));
     }

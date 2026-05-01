@@ -1,4 +1,3 @@
-import 'package:bus_system/features/auth/driver_register/models/pickup_point_model.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -16,16 +15,3 @@ class DriverRegisterFailure extends DriverRegisterState {
   DriverRegisterFailure({required this.errorMessage});
 }
 
-class PickupPointsLoaded extends DriverRegisterState {
-  final List<PickupPointModel> pickupPoints;
-
-  PickupPointsLoaded({required this.pickupPoints});
-}
-
-class PickupPointsLoading extends DriverRegisterState {}
-
-class PickupPointSelectedState extends DriverRegisterState {
-  final PickupPointModel pickupPoint;
-
-  PickupPointSelectedState({required this.pickupPoint});
-}

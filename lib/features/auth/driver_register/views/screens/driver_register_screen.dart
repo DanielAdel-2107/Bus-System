@@ -9,7 +9,7 @@ class DriverRegisterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => DriverRegisterCubit()..fetchPickupPoints(),
+      create: (context) => DriverRegisterCubit(),
       child: const Scaffold(
         body: DriverRegisterScreenBody(),
       ),

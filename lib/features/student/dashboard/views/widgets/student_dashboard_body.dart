@@ -6,8 +6,8 @@ import 'package:bus_system/features/auth/sign_in/views/screens/sign_in_screen.da
 import 'package:bus_system/core/utilies/colors/app_colors.dart';
 import 'package:bus_system/features/settings/views/screens/settings_screen.dart';
 import 'package:bus_system/features/student/dashboard/view_models/student_dashboard_cubit/student_dashboard_cubit.dart';
-import 'package:bus_system/features/student/nearest_pickups/views/screens/nearest_pickups_screen.dart';
 import 'package:bus_system/features/student/subscriptions/views/screens/subscriptions_screen.dart';
+import 'package:bus_system/features/student/bus_lines/views/screens/bus_line_details_screen.dart';
 import 'package:custom_quick_alert/custom_quick_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -121,9 +121,6 @@ class StudentDashboardBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 36),
 
-                // Nearest Pickup
-                _buildNearestPickupCard(state.nearestPickup),
-                const SizedBox(height: 32),
 
                 // Subscription Status
                 _buildSubscriptionSection(
@@ -132,9 +129,10 @@ class StudentDashboardBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 36),
 
-                // Available Trips (Now showing all drivers assigned to points)
-                _buildAvailableTripsSection(context, state.availablePickups),
+                // To Sadat Academy Lines
+                _buildBusLinesSection(context),
                 const SizedBox(height: 36),
+
 
                 // Active Booking
                 _buildActiveBookingSection(state.activeBooking),
@@ -153,89 +151,6 @@ class StudentDashboardBody extends StatelessWidget {
     );
   }
 
-  Widget _buildNearestPickupCard(Map<String, dynamic> nearestPickup) {
-    return Container(
-          padding: const EdgeInsets.all(26),
-          decoration: BoxDecoration(
-            gradient: AppColors.cardGradient,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withOpacity(0.15),
-                blurRadius: 65,
-                offset: const Offset(0, 25),
-              ),
-              BoxShadow(
-                color: AppColors.kPrimaryColor.withOpacity(0.1),
-                blurRadius: 35,
-                offset: const Offset(0, 12),
-              ),
-            ],
-            border: Border.all(
-              color: Colors.white.withOpacity(0.8),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.star_rounded,
-                    size: 36,
-                    color: AppColors.kPrimaryColor,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Nearest Pickup Point",
-                      style: GoogleFonts.poppins(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  nearestPickup['location'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 27.5,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.9,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                nearestPickup['distance'].isNotEmpty
-                    ? "${nearestPickup['distance']} away • Next bus ${nearestPickup['next_bus_time']}"
-                    : "No nearby pickup points available",
-                style: GoogleFonts.poppins(
-                  fontSize: 16.5,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 26),
-              _premiumSmallButton(
-                "Book Now 🚀",
-                () {},
-                icon: Icons.arrow_forward_rounded,
-              ),
-            ],
-          ),
-        )
-        .animate()
-        .fadeIn(duration: 600.ms)
-        .scale(begin: const Offset(0.9, 0.9), curve: Curves.easeOutBack);
-  }
 
   Widget _buildSubscriptionSection(
     bool isActive,
@@ -335,221 +250,6 @@ class StudentDashboardBody extends StatelessWidget {
     }
   }
 
-  Widget _buildAvailableTripsSection(
-    BuildContext context,
-    List<Map<String, dynamic>> trips,
-  ) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Available Trips",
-                  style: GoogleFonts.poppins(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  "Trips with assigned drivers",
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "View All",
-                style: GoogleFonts.poppins(
-                  color: AppColors.kPrimaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (trips.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.directions_bus_outlined,
-                  size: 40,
-                  color: Colors.grey.shade400,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "No trips available at the moment",
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-                Text(
-                  "Check back later when a driver is assigned",
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(bottom: 4),
-              itemCount: trips.length,
-              itemBuilder: (context, index) {
-                final p = trips[index];
-                return _buildTripCard(p, index);
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTripCard(Map<String, dynamic> p, int index) {
-    final distStr = p['distance'] as String? ?? '';
-    final pointStr = p['point'] as String? ?? '';
-    return Container(
-      width: 215,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Area name
-          Text(
-            p['area'] as String? ?? '',
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          // Address
-          if (pointStr.isNotEmpty)
-            Text(
-              pointStr,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          const SizedBox(height: 10),
-          // Bus number
-          Row(
-            children: [
-              Icon(
-                Icons.directions_bus_rounded,
-                size: 14,
-                color: AppColors.kPrimaryColor,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  p['bus'] as String? ?? '',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.kPrimaryColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          // Driver name
-          Row(
-            children: [
-              Icon(
-                Icons.person_rounded,
-                size: 14,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  p['driver'] as String? ?? '',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Seats + Distance
-          Row(
-            children: [
-              if (distStr.isNotEmpty && distStr != 'Not available') ...[
-                Icon(
-                  Icons.location_on_rounded,
-                  size: 12,
-                  color: AppColors.kPrimaryColor.withOpacity(0.7),
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  distStr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.5,
-                    color: AppColors.kPrimaryColor.withOpacity(0.8),
-                  ),
-                ),
-                const Spacer(),
-              ],
-              if ((p['total_seats'] as int? ?? 0) > 0)
-                Text(
-                  "${p['total_seats']} seats",
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().fadeIn(delay: (60 * index).ms).slideX(begin: 0.15);
-  }
 
   Widget _buildActiveBookingSection(Map<String, dynamic> booking) {
     return Column(
@@ -735,16 +435,6 @@ class StudentDashboardBody extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             children: [
               _modernQuickCard(
-                Icons.map_rounded,
-                "Nearest\nPickup Points",
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NearestPickupsScreen(),
-                  ),
-                ),
-              ),
-              _modernQuickCard(
                 Icons.credit_card_rounded,
                 "Subscriptions",
                 () => Navigator.push(
@@ -813,6 +503,142 @@ class StudentDashboardBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildBusLinesSection(BuildContext context) {
+    final List<Map<String, dynamic>> lines = [
+      {
+        'name': 'Mokattam',
+        'icon': Icons.terrain_rounded,
+        'color': const Color(0xFF6366F1), // Indigo
+        'bg': const Color(0xFFEEF2FF),
+      },
+      {
+        'name': 'Nasr City',
+        'icon': Icons.location_city_rounded,
+        'color': const Color(0xFFF59E0B), // Amber
+        'bg': const Color(0xFFFFFBEB),
+      },
+      {
+        'name': '6 October',
+        'icon': Icons.apartment_rounded,
+        'color': const Color(0xFF10B981), // Emerald
+        'bg': const Color(0xFFECFDF5),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 24,
+              decoration: BoxDecoration(
+                color: AppColors.kPrimaryColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "To Sadat Academy",
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 180,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: lines.length,
+            itemBuilder: (context, index) {
+              final line = lines[index];
+              return _buildLineCard(context, line, index);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLineCard(BuildContext context, Map<String, dynamic> line, int index) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 20),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BusLineDetailsScreen(lineName: line['name']),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(32),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: (line['color'] as Color).withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(
+              color: (line['color'] as Color).withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: line['bg'],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  line['icon'],
+                  color: line['color'],
+                  size: 28,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                line['name'],
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "View Trips",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(delay: (100 * index).ms).slideX(begin: 0.2, curve: Curves.easeOutCubic);
   }
 
   Widget _premiumSmallButton(

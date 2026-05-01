@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:bus_system/app/my_app.dart';
 import 'package:bus_system/core/cache/cache_helper.dart';
 import 'package:bus_system/core/di/dependancy_injection.dart';

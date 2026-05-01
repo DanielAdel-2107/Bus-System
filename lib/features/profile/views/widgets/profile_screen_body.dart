@@ -1,4 +1,3 @@
-import 'package:bus_system/core/app_route/route_names.dart';
 import 'package:bus_system/core/helper/get_responsive_font_size.dart';
 import 'package:bus_system/core/utilies/colors/app_colors.dart';
 import 'package:bus_system/core/utilies/sizes/sized_config.dart';

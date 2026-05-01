@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:bus_system/core/di/dependancy_injection.dart';
 import 'package:bus_system/features/university/driver_verification/models/driver_model.dart';
 import 'package:bus_system/features/university/driver_verification/view_models/driver_verification_cubit/driver_verification_state.dart';
+import 'package:bus_system/features/university/pickup_management/models/pickup_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,18 +33,21 @@ class DriverVerificationCubit extends Cubit<DriverVerificationState> {
           .from(_viewName)
           .select()
           .order('created_at', ascending: false);
-      
+
       final drivers = data.map((json) => Driver.fromMap(json)).toList();
-      
-      final currentStatus = state is DriverVerificationSuccess 
-          ? (state as DriverVerificationSuccess).selectedStatus 
+
+      final currentStatus = state is DriverVerificationSuccess
+          ? (state as DriverVerificationSuccess).selectedStatus
           : 'all';
-      
-      emit(DriverVerificationSuccess(
-        allDrivers: drivers, 
-        selectedStatus: currentStatus,
-        successMessage: null, // Always nullify here to prevent redundant alerts on background sync
-      ));
+
+      emit(
+        DriverVerificationSuccess(
+          allDrivers: drivers,
+          selectedStatus: currentStatus,
+          successMessage:
+              null, // Always nullify here to prevent redundant alerts on background sync
+        ),
+      );
     } catch (e) {
       if (state is! DriverVerificationSuccess) {
         emit(DriverVerificationError(e.toString()));
@@ -54,28 +58,63 @@ class DriverVerificationCubit extends Cubit<DriverVerificationState> {
   void filterDrivers(String status) {
     if (state is DriverVerificationSuccess) {
       final currentState = state as DriverVerificationSuccess;
-      emit(currentState.copyWith(
-        selectedStatus: status,
-        successMessage: null, // Ensure message is cleared when switching filters
-      ));
+      emit(
+        currentState.copyWith(
+          selectedStatus: status,
+          successMessage:
+              null, // Ensure message is cleared when switching filters
+        ),
+      );
     }
   }
 
-  Future<void> approveDriver(String id) async {
+  Future<void> fetchPickupPoints(String lineName) async {
+    if (state is DriverVerificationSuccess) {
+      final currentState = state as DriverVerificationSuccess;
+      emit(currentState.copyWith(isFetchingPickups: true, pickupPoints: []));
+
+      try {
+        final data = await supabase
+            .from('pickup_points_with_drivers')
+            .select()
+            .eq('line_name', lineName);
+
+        final points = data.map((json) => PickupPoint.fromMap(json)).toList();
+
+        emit(
+          currentState.copyWith(isFetchingPickups: false, pickupPoints: points),
+        );
+      } catch (e) {
+        emit(DriverVerificationError(e.toString()));
+      }
+    }
+  }
+
+  Future<void> approveDriver(
+    String id,
+    String lineName,
+    String pickupPointId,
+  ) async {
     try {
       await supabase
           .from(_tableName)
           .update({
             'is_verified': true,
             'status': 'accepted',
+            'line_name': lineName,
+            'pickup_point_id': pickupPointId,
           })
           .eq('id', id);
-      
+
       // Force an immediate refresh of the list
       await _fetchAndEmitDrivers();
-      
+
       if (state is DriverVerificationSuccess) {
-        emit((state as DriverVerificationSuccess).copyWith(successMessage: 'Driver Approved Successfully!'));
+        emit(
+          (state as DriverVerificationSuccess).copyWith(
+            successMessage: 'Driver Approved on $lineName Line!',
+          ),
+        );
       }
     } catch (e) {
       emit(DriverVerificationError(e.toString()));
@@ -86,17 +125,18 @@ class DriverVerificationCubit extends Cubit<DriverVerificationState> {
     try {
       await supabase
           .from(_tableName)
-          .update({
-            'is_verified': false,
-            'status': 'rejected',
-          })
+          .update({'is_verified': false, 'status': 'rejected'})
           .eq('id', id);
-      
+
       // Force an immediate refresh of the list
       await _fetchAndEmitDrivers();
-      
+
       if (state is DriverVerificationSuccess) {
-        emit((state as DriverVerificationSuccess).copyWith(successMessage: 'Driver Application Rejected.'));
+        emit(
+          (state as DriverVerificationSuccess).copyWith(
+            successMessage: 'Driver Application Rejected.',
+          ),
+        );
       }
     } catch (e) {
       emit(DriverVerificationError(e.toString()));

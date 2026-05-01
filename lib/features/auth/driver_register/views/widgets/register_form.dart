@@ -2,7 +2,6 @@ import 'package:bus_system/core/components/custom_drop_down_button_form_field.da
 import 'package:bus_system/core/components/custom_text_form_field_with_title.dart';
 import 'package:bus_system/core/utilies/colors/app_colors.dart';
 import 'package:bus_system/core/utilies/sizes/sized_config.dart';
-import 'package:bus_system/features/auth/driver_register/models/pickup_point_model.dart';
 import 'package:bus_system/features/auth/driver_register/view_models/cubit/driver_register_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -49,18 +48,6 @@ class RegisterForm extends StatelessWidget {
             primaryColor: AppColors.primaryBlue,
           ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
 
-          SizedBox(height: SizeConfig.height * 0.02),
-
-          CustomDropDownButtonFormField<PickupPointModel>(
-            title: 'Starting Pickup Point',
-            hintText: 'Select your starting point',
-            items: cubit.pickupPoints,
-            value: cubit.selectedPickupPoint,
-            onChanged: (val) => cubit.selectPickupPoint(val),
-            fillColor: Colors.grey.shade50,
-            itemLabelBuilder: (item) => item.name,
-            primaryColor: AppColors.primaryBlue,
-          ).animate().fadeIn(delay: 700.ms).slideX(begin: 0.1),
         ],
       ),
     );

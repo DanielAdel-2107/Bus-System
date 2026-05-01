@@ -1,5 +1,4 @@
 import 'dart:developer' show log;
-import 'dart:math' show cos, sqrt, asin;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,9 +9,19 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
 
   final SupabaseClient supabase = Supabase.instance.client;
 
+  RealtimeChannel? _subscriptionsChannel;
+  RealtimeChannel? _bookingsChannel;
+
+  // Cached student name to avoid re-fetching on every realtime update
+  String _cachedStudentName = 'Student';
+
   Future<void> fetchDashboardData() async {
     emit(StudentDashboardLoading());
+    await _loadData();
+    _listenToRealtime();
+  }
 
+  Future<void> _loadData() async {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -47,92 +56,20 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
         hasActiveSub = subscription['is_active'] == true;
       }
 
-      // 2. Student name
-      String studentName = 'Student';
-      final profile = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', userId)
-          .maybeSingle();
+      // 2. Student name (cached to avoid redundant calls on realtime updates)
+      if (_cachedStudentName == 'Student') {
+        final profile = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', userId)
+            .maybeSingle();
 
-      if (profile != null && profile['full_name'] != null) {
-        studentName = profile['full_name'] as String;
-      }
-
-      // 3. Coordinates (temporary - replace with geolocator later)
-      const double userLat = 26.5569;
-      const double userLng = 31.7000;
-
-      // 4. Nearest pickup (using RPC for the specific 'Nearest' section)
-      Map<String, dynamic> nearestPickup = {
-        'location': 'No nearby points',
-        'distance': '',
-        'next_bus_time': 'Not available',
-      };
-
-      try {
-        final nearestResList = await supabase.rpc('get_nearest_pickup', params: {
-          'student_lat': userLat,
-          'student_lng': userLng,
-        });
-
-        if (nearestResList is List && nearestResList.isNotEmpty) {
-          final nearestRes = nearestResList.first;
-          final distMeters = nearestRes['distance_meters'] as num?;
-          nearestPickup = {
-            'location': nearestRes['name'] ?? nearestRes['address'] ?? 'Unknown',
-            'distance': _formatDistance(distMeters),
-            'next_bus_time': '07:30 AM',
-          };
+        if (profile != null && profile['full_name'] != null) {
+          _cachedStudentName = profile['full_name'] as String;
         }
-      } catch (e) {
-        log('Error fetching nearest pickup via RPC: $e');
       }
 
-      // 5. Available Trips (Fetch directly from pickup_points as requested)
-      List<Map<String, dynamic>> availablePickups = [];
-
-      try {
-        final ppRes = await supabase
-            .from('pickup_points')
-            .select('id, name, address, latitude, longitude');
-
-        if (ppRes is List) {
-          final List<Map<String, dynamic>> trips = [];
-          
-          for (var pp in ppRes) {
-            double? distKm;
-            if (pp['latitude'] != null && pp['longitude'] != null) {
-              distKm = _calculateDistance(
-                userLat, 
-                userLng, 
-                (pp['latitude'] as num).toDouble(), 
-                (pp['longitude'] as num).toDouble()
-              );
-            }
-
-            trips.add({
-              'pickup_id':   pp['id']?.toString() ?? '',
-              'driver_id':   '', // Simplified for now
-              'area':        pp['name'] ?? 'Unknown area',
-              'point':       pp['address'] ?? '',
-              'bus':         'Available Point',
-              'driver':      'View Details',
-              'total_seats': 0,
-              'distance_val': distKm ?? 999999.0,
-              'distance':    _formatDistanceKm(distKm),
-            });
-          }
-
-          // Sort by distance (nearest first)
-          trips.sort((a, b) => (a['distance_val'] as double).compareTo(b['distance_val'] as double));
-          availablePickups = trips;
-        }
-      } catch (e) {
-        log('Error fetching available trips from pickup_points: $e');
-      }
-
-      // 6. Active / latest booking
+      // 3. Active / latest booking
       Map<String, dynamic> activeBooking = {
         'bus': 'No active booking',
         'pickup': '—',
@@ -167,10 +104,12 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
           final driverData = bookingRes['drivers'];
           final driverProfile = driverData?['profiles'];
           final pickupPoint = driverData?['pickup_points'];
-          
+
           activeBooking = {
             'bus': driverData?['bus_number']?.toString() ?? '—',
-            'pickup': pickupPoint?['name']?.toString() ?? pickupPoint?['address']?.toString() ?? '—',
+            'pickup': pickupPoint?['name']?.toString() ??
+                pickupPoint?['address']?.toString() ??
+                '—',
             'driver': driverProfile?['full_name']?.toString() ?? 'Unknown',
             'time': bookingRes['booking_date']?.toString() ?? '—',
             'status': (bookingRes['status'] as String? ?? 'booked').toUpperCase(),
@@ -181,39 +120,67 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
         log('Error fetching latest booking: $e');
       }
 
-      emit(StudentDashboardLoaded(
-        studentName: studentName,
-        subscription: subscription,
-        nearestPickup: nearestPickup,
-        availablePickups: availablePickups,
-        activeBooking: activeBooking,
-        hasActiveSubscription: hasActiveSub,
-      ));
+      if (!isClosed) {
+        emit(StudentDashboardLoaded(
+          studentName: _cachedStudentName,
+          subscription: subscription,
+          activeBooking: activeBooking,
+          hasActiveSubscription: hasActiveSub,
+        ));
+      }
     } catch (e, stack) {
-      emit(StudentDashboardError('Error loading dashboard: $e'));
+      if (!isClosed) emit(StudentDashboardError('Error loading dashboard: $e'));
       log('Dashboard error: $e\n$stack');
     }
   }
 
-  String _formatDistance(num? meters) {
-    if (meters == null || meters <= 0) return '';
-    if (meters < 1000) return '${meters.toStringAsFixed(0)} m';
-    final km = meters / 1000;
-    return '${km.toStringAsFixed(1)} km';
+  void _listenToRealtime() {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    // Listen to subscriptions table
+    _subscriptionsChannel = supabase
+        .channel('student_subscriptions_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'subscriptions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'student_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            log('Realtime: subscription changed');
+            _loadData();
+          },
+        )
+        .subscribe();
+
+    // Listen to bookings table
+    _bookingsChannel = supabase
+        .channel('student_bookings_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bookings',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'student_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            log('Realtime: booking changed');
+            _loadData();
+          },
+        )
+        .subscribe();
   }
 
-  String _formatDistanceKm(double? km) {
-    if (km == null || km <= 0) return 'Not available';
-    if (km < 1) return '${(km * 1000).toStringAsFixed(0)} m';
-    return '${km.toStringAsFixed(1)} km';
-  }
-
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    var p = 0.017453292519943295;
-    var c = cos;
-    var a = 0.5 - c((lat2 - lat1) * p) / 2 + 
-          c(lat1 * p) * c(lat2 * p) * 
-          (1 - c((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a));
+  @override
+  Future<void> close() async {
+    await _subscriptionsChannel?.unsubscribe();
+    await _bookingsChannel?.unsubscribe();
+    return super.close();
   }
 }

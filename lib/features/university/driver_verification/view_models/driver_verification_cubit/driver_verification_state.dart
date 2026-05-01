@@ -1,4 +1,5 @@
 import 'package:bus_system/features/university/driver_verification/models/driver_model.dart';
+import 'package:bus_system/features/university/pickup_management/models/pickup_model.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class DriverVerificationState extends Equatable {
@@ -16,11 +17,15 @@ class DriverVerificationSuccess extends DriverVerificationState {
   final List<Driver> allDrivers;
   final String selectedStatus; // 'pending', 'accepted', 'rejected', 'all'
   final String? successMessage;
+  final List<PickupPoint> pickupPoints;
+  final bool isFetchingPickups;
 
   const DriverVerificationSuccess({
     required this.allDrivers,
     this.selectedStatus = 'all',
     this.successMessage,
+    this.pickupPoints = const [],
+    this.isFetchingPickups = false,
   });
 
   List<Driver> get filteredDrivers {
@@ -32,16 +37,26 @@ class DriverVerificationSuccess extends DriverVerificationState {
     List<Driver>? allDrivers,
     String? selectedStatus,
     String? successMessage,
+    List<PickupPoint>? pickupPoints,
+    bool? isFetchingPickups,
   }) {
     return DriverVerificationSuccess(
       allDrivers: allDrivers ?? this.allDrivers,
       selectedStatus: selectedStatus ?? this.selectedStatus,
       successMessage: successMessage ?? this.successMessage,
+      pickupPoints: pickupPoints ?? this.pickupPoints,
+      isFetchingPickups: isFetchingPickups ?? this.isFetchingPickups,
     );
   }
 
   @override
-  List<Object?> get props => [allDrivers, selectedStatus, successMessage];
+  List<Object?> get props => [
+        allDrivers,
+        selectedStatus,
+        successMessage,
+        pickupPoints,
+        isFetchingPickups,
+      ];
 }
 
 class DriverVerificationError extends DriverVerificationState {

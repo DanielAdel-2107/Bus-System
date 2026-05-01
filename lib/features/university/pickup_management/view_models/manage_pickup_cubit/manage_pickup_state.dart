@@ -21,6 +21,17 @@ class ManagePickupSuccess extends ManagePickupState {
   List<Object?> get props => [pickups];
 }
 
+class ManagePickupActionLoading extends ManagePickupState {}
+
+class ManagePickupActionSuccess extends ManagePickupState {
+  final String message;
+
+  const ManagePickupActionSuccess(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
 class ManagePickupError extends ManagePickupState {
   final String message;
 

@@ -19,9 +19,23 @@ class ManagePickupScreenBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<ManagePickupCubit, ManagePickupState>(
       listener: (context, state) {
-        if (state is ManagePickupError) {
-          CustomQuickAlert.dismiss(); // Clear any existing dialogs
-          CustomQuickAlert.error(title: 'Error', message: state.message);
+        if (state is ManagePickupActionLoading) {
+          CustomQuickAlert.loading(
+            title: 'Please wait',
+            message: 'Processing request...',
+          );
+        } else if (state is ManagePickupActionSuccess) {
+          CustomQuickAlert.dismiss();
+          CustomQuickAlert.success(
+            title: 'Success!',
+            message: state.message,
+          );
+        } else if (state is ManagePickupError) {
+          CustomQuickAlert.dismiss();
+          CustomQuickAlert.error(
+            title: 'Error',
+            message: state.message,
+          );
         }
       },
       child: Stack(

@@ -9,6 +9,7 @@ class PickupPoint extends Equatable {
   final String? createdBy;
   final DateTime? createdAt;
   final String? driverName;
+  final String? lineName;
 
   const PickupPoint({
     this.id,
@@ -19,13 +20,14 @@ class PickupPoint extends Equatable {
     this.createdBy,
     this.createdAt,
     this.driverName,
+    this.lineName,
   });
 
   bool get isAssigned => driverName != null && driverName!.isNotEmpty;
 
   @override
   List<Object?> get props =>
-      [id, name, address, latitude, longitude, createdBy, createdAt, driverName];
+      [id, name, address, latitude, longitude, createdBy, createdAt, driverName, lineName];
 
   PickupPoint copyWith({
     String? id,
@@ -36,6 +38,7 @@ class PickupPoint extends Equatable {
     String? createdBy,
     DateTime? createdAt,
     String? driverName,
+    String? lineName,
   }) {
     return PickupPoint(
       id: id ?? this.id,
@@ -46,6 +49,7 @@ class PickupPoint extends Equatable {
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       driverName: driverName ?? this.driverName,
+      lineName: lineName ?? this.lineName,
     );
   }
 
@@ -56,6 +60,7 @@ class PickupPoint extends Equatable {
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
+      'line_name': lineName,
       if (createdBy != null) 'created_by': createdBy,
     };
   }
@@ -72,6 +77,7 @@ class PickupPoint extends Equatable {
           ? DateTime.parse(map['created_at'])
           : null,
       driverName: map['driver_name']?.toString(),
+      lineName: map['line_name']?.toString(),
     );
   }
 }

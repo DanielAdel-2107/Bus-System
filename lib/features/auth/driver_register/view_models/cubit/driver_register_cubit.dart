@@ -1,7 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:bus_system/core/di/dependancy_injection.dart';
 import 'package:bus_system/core/network/supabase/database/get_data.dart';
-import 'package:bus_system/features/auth/driver_register/models/pickup_point_model.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,33 +14,10 @@ class DriverRegisterCubit extends Cubit<DriverRegisterState> {
   final busNumberController = TextEditingController();
   final totalSeatsController = TextEditingController();
   
-  List<PickupPointModel> pickupPoints = [];
-  PickupPointModel? selectedPickupPoint;
 
-  Future<void> fetchPickupPoints() async {
-    emit(PickupPointsLoading());
-    try {
-      final data = await getData(tableName: 'pickup_points', orderBy: 'name');
-      pickupPoints = data.map((json) => PickupPointModel.fromJson(json)).toList();
-      emit(PickupPointsLoaded(pickupPoints: pickupPoints));
-    } catch (e) {
-      emit(DriverRegisterFailure(errorMessage: e.toString()));
-    }
-  }
-
-  void selectPickupPoint(PickupPointModel? point) {
-    selectedPickupPoint = point;
-    if (point != null) {
-      emit(PickupPointSelectedState(pickupPoint: point));
-    }
-  }
 
   Future<void> submitDriverInfo() async {
     if (formKey.currentState!.validate()) {
-      if (selectedPickupPoint == null) {
-        emit(DriverRegisterFailure(errorMessage: 'Please select a pickup point'));
-        return;
-      }
 
       emit(DriverRegisterLoading());
       try {
@@ -62,7 +38,6 @@ class DriverRegisterCubit extends Cubit<DriverRegisterState> {
           'license_number': licenseController.text.trim(),
           'bus_number': busNumberController.text.trim(),
           'total_seats': totalSeats,
-          'pickup_point_id': selectedPickupPoint!.id,
           'is_verified': false,
           'status': 'pending', // Explicitly setting it just in case
         });

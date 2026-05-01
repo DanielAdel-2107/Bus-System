@@ -69,39 +69,22 @@ class DriverRegisterScreenBody extends StatelessWidget {
                   const RegisterHeader(),
 
                   SizedBox(height: SizeConfig.height * 0.04),
-                  BlocBuilder<DriverRegisterCubit, DriverRegisterState>(
-                    buildWhen: (previous, current) =>
-                        current is PickupPointsLoaded ||
-                        current is PickupPointsLoading,
-                    builder: (context, state) {
-                      if (state is PickupPointsLoading) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(40.0),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primaryBlue,
-                            ),
-                          ),
-                        );
-                      }
-                      return Container(
-                        padding: EdgeInsets.all(SizeConfig.width * 0.05),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          gradient: AppColors.cardGradient,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryBlue.withOpacity(0.08),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
+                  Container(
+                    padding: EdgeInsets.all(SizeConfig.width * 0.05),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      gradient: AppColors.cardGradient,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryBlue.withOpacity(0.08),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
                         ),
-                        child: const RegisterForm(),
-                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1);
-                    },
-                  ),
+                      ],
+                    ),
+                    child: const RegisterForm(),
+                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
 
                   SizedBox(height: SizeConfig.height * 0.06),
 
