@@ -16,6 +16,10 @@ class CustomTextFormField extends StatelessWidget {
     this.onChanged,
     this.onTap,
     this.enable = true,
+    this.obscureText = false,
+    this.validator,
+    this.keyboardType,
+    this.textInputAction,
   });
   final int maxline;
   final String? hintText;
@@ -27,6 +31,11 @@ class CustomTextFormField extends StatelessWidget {
   final Function(String)? onChanged;
   final Function()? onTap;
   final bool enable;
+  final bool obscureText;
+  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -37,13 +46,19 @@ class CustomTextFormField extends StatelessWidget {
           onChanged: onChanged,
           controller: controller,
           onTap: onTap,
+          obscureText: obscureText,
+          validator: validator,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
           decoration: InputDecoration(
-            label: lable != null ? Text(lable!) : null,
+            labelText: lable,
             labelStyle: AppTextStyles.title16PrimaryColorW500,
             enabled: enable,
             fillColor: fillColor ?? Colors.transparent,
             filled: true,
-            prefixIcon:prefixIcon != null ? Icon(prefixIcon, color: AppColors.kPrimaryColor): null,
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: AppColors.kPrimaryColor)
+                : null,
             suffixIcon: suffixIcon,
             hintText: hintText,
             hintStyle: AppTextStyles.title16Grey,
@@ -54,6 +69,8 @@ class CustomTextFormField extends StatelessWidget {
             border: buildBorder(),
             enabledBorder: buildBorder(),
             focusedBorder: buildBorder(),
+            errorBorder: buildBorder(color: Colors.red),
+            focusedErrorBorder: buildBorder(color: Colors.red, width: 2),
           ),
           maxLines: maxline,
         ),
@@ -61,10 +78,13 @@ class CustomTextFormField extends StatelessWidget {
     );
   }
 
-  OutlineInputBorder buildBorder() {
+  OutlineInputBorder buildBorder({Color? color, double width = 1}) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: AppColors.kPrimaryColor),
+      borderSide: BorderSide(
+        color: color ?? AppColors.kPrimaryColor,
+        width: width,
+      ),
     );
   }
 }
