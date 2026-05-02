@@ -43,11 +43,18 @@ class DriverRegisterCubit extends Cubit<DriverRegisterState> {
         });
         emit(DriverRegisterSuccess());
       } catch (e) {
-        // Handle specific unique constraint violation for license_number if possible
+        debugPrint('Driver Register Error: $e');
         String message = e.toString();
-        if (message.contains('unique_license_number') || message.contains('duplicate key')) {
-          message = 'This license number is already registered.';
+        
+        // Handle specific unique constraint violation for license_number
+        if (message.contains('unique_license_number') || 
+            message.contains('duplicate key') || 
+            message.contains('drivers_license_number_key')) {
+          message = 'This license number is already registered. Please check the number and try again.';
+        } else if (message.toLowerCase().contains('session') || message.toLowerCase().contains('auth') || message.toLowerCase().contains('sign in')) {
+          message = 'Your session has expired. Please sign in again.';
         }
+        
         emit(DriverRegisterFailure(errorMessage: message));
       }
     }

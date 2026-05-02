@@ -183,7 +183,7 @@ class NotificationsHelper {
       String? accessToken = await getAccessToken();
 
       const String url =
-          "https://fcm.googleapis.com/v1/projects//messages:send";
+          "https://fcm.googleapis.com/v1/projects/bus-system-6a7ba/messages:send";
 
       Dio dio = Dio();
       dio.options.headers['Content-Type'] = 'application/json';
@@ -226,17 +226,17 @@ class NotificationsHelper {
       // Fetch current tokens
       final response = await supabase
           .from('profiles')
-          .select('token')
+          .select('tokens')
           .eq('id', userId)
           .maybeSingle();
 
-      List<dynamic> tokens = response?['token'] ?? [];
+      List<dynamic> tokens = response?['tokens'] ?? [];
       
       if (!tokens.contains(newToken)) {
         tokens.add(newToken);
         await supabase
             .from('profiles')
-            .update({'token': tokens})
+            .update({'tokens': tokens})
             .eq('id', userId);
         log("✅ FCM Token saved successfully for user $userId");
       }
@@ -253,13 +253,13 @@ class NotificationsHelper {
       // 1. Fetch user tokens
       final response = await supabase
           .from('profiles')
-          .select('token')
+          .select('tokens')
           .eq('id', userId)
           .maybeSingle();
 
-      if (response == null || response['token'] == null) return;
+      if (response == null || response['tokens'] == null) return;
       
-      List<dynamic> tokens = response['token'];
+      List<dynamic> tokens = response['tokens'];
       
       // 2. Send to all registered tokens for this user
       for (String token in tokens) {

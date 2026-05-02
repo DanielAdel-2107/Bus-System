@@ -73,7 +73,13 @@ class _SignUpFormState extends State<SignUpForm> {
             hintText: '01012345678',
             prefixIcon: Icons.phone_rounded,
             keyboardType: TextInputType.phone,
-            validator: (v) => (v?.length ?? 0) < 10 ? 'Invalid phone number' : null,
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Phone number is required';
+              if (!RegExp(r'^01[0125][0-9]{8}$').hasMatch(v)) {
+                return 'Enter a valid 11-digit Egyptian phone number';
+              }
+              return null;
+            },
           ),
 
           SizedBox(height: SizeConfig.height * 0.02),

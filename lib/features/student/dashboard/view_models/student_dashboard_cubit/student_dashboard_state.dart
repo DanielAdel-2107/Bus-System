@@ -11,12 +11,14 @@ class StudentDashboardLoaded extends StudentDashboardState {
   final Map<String, dynamic> subscription;
   final Map<String, dynamic> activeBooking;
   final bool hasActiveSubscription;
+  final Map<String, double> lineDistances;
 
   StudentDashboardLoaded({
     required this.studentName,
     required this.subscription,
     required this.activeBooking,
     required this.hasActiveSubscription,
+    this.lineDistances = const {},
   });
 }
 

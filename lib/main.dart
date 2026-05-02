@@ -1,4 +1,5 @@
 import 'package:bus_system/core/di/dependancy_injection.dart';
+import 'package:bus_system/core/notifications/fcm_notification.dart';
 import 'package:bus_system/core/notifications/local_notifications_services.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -37,6 +38,8 @@ Future<void> main() async {
   await setupDI();
   await clearOldCacheIfNeeded();
   await LocalNotificationsServices.init();
+  await NotificationsHelper().initNotifications();
+  NotificationsHelper().setupFirebaseMessaging();
   runApp(DevicePreview(enabled: false, builder: (context) => MyApp()));
   CustomQuickAlert.initialize(navigatorKey);
 }

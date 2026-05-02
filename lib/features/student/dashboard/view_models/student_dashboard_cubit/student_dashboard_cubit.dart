@@ -1,5 +1,6 @@
 import 'dart:developer' show log;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'student_dashboard_state.dart';
@@ -91,7 +92,9 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
                 ),
                 pickup_points (
                   name,
-                  address
+                  address,
+                  latitude,
+                  longitude
                 )
               )
             ''')
@@ -110,14 +113,62 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
             'pickup': pickupPoint?['name']?.toString() ??
                 pickupPoint?['address']?.toString() ??
                 '—',
+            'pickup_lat': (pickupPoint?['latitude'] as num?)?.toDouble(),
+            'pickup_lng': (pickupPoint?['longitude'] as num?)?.toDouble(),
             'driver': driverProfile?['full_name']?.toString() ?? 'Unknown',
             'time': bookingRes['booking_date']?.toString() ?? '—',
             'status': (bookingRes['status'] as String? ?? 'booked').toUpperCase(),
             'seat': bookingRes['seat_number'],
+            'distance': null,
           };
         }
       } catch (e) {
         log('Error fetching latest booking: $e');
+      }
+
+      // 4. Fetch Nearest Pickup Point Distances for the 3 main lines
+      final List<String> lineNames = ['Mokattam', 'Nasr City', '6 October'];
+      final Map<String, double> lineDistances = {};
+      
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        ).timeout(const Duration(seconds: 2), onTimeout: () => throw Exception('Timeout'));
+
+        // Calculate distance to active booking if it exists
+        if (activeBooking['pickup_lat'] != null) {
+          final d = Geolocator.distanceBetween(
+            position.latitude, position.longitude,
+            activeBooking['pickup_lat'], activeBooking['pickup_lng']
+          );
+          activeBooking['distance'] = d / 1000;
+        }
+
+        // Calculate distances for all lines
+        final pointsRes = await supabase
+            .from('pickup_points')
+            .select('line_name, latitude, longitude')
+            .inFilter('line_name', lineNames);
+
+        if (pointsRes != null) {
+          final points = pointsRes as List;
+          for (var line in lineNames) {
+            double minDistance = double.infinity;
+            final linePoints = points.where((p) => p['line_name'] == line);
+            for (var p in linePoints) {
+               final d = Geolocator.distanceBetween(
+                 position.latitude, position.longitude,
+                 (p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()
+               );
+               if (d < minDistance) minDistance = d;
+            }
+            if (minDistance != double.infinity) {
+              lineDistances[line] = minDistance / 1000;
+            }
+          }
+        }
+      } catch (e) {
+        log('Location/Distance calculation skipped or failed: $e');
       }
 
       if (!isClosed) {
@@ -126,6 +177,7 @@ class StudentDashboardCubit extends Cubit<StudentDashboardState> {
           subscription: subscription,
           activeBooking: activeBooking,
           hasActiveSubscription: hasActiveSub,
+          lineDistances: lineDistances,
         ));
       }
     } catch (e, stack) {

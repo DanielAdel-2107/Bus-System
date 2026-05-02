@@ -34,22 +34,10 @@ class DriverRegisterScreenBody extends StatelessWidget {
           CustomQuickAlert.error(
             message: state.errorMessage,
             title: 'Submission Error',
-            onConfirm: () {
-              // Optionally allow them to go back to Sign In if they are stuck
-              if (state.errorMessage.contains('session') ||
-                  state.errorMessage.contains('already registered')) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  RouteNames.signInScreen,
-                  (route) => false,
-                );
-              }
-            },
           );
         }
       },
       child: PopScope(
-        // Prevent the driver from pressing the system back button to skip
         canPop: false,
         child: Container(
           width: double.infinity,

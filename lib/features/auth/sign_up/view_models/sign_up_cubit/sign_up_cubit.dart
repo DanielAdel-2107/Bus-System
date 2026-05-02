@@ -21,23 +21,54 @@ class SignUpCubit extends Cubit<SignUpState> {
     try {
       debugPrint('--- SIGN UP TRACKING START ---');
       
-      // 1. Sign up user in Supabase Auth
-      debugPrint('Step 1: Calling supabase.auth.signUp...');
-      final AuthResponse response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'full_name': fullName,
-          'phone': phone,
-          'role': role,
-        },
-      );
-      
-      final user = response.user;
-      if (user == null) {
-        throw Exception('User creation failed - Please check your connection');
+      User? user = supabase.auth.currentUser;
+
+      // 1. Auth Logic: Handle new sign up or recovery
+      if (user != null && user.email != email) {
+        await supabase.auth.signOut();
+        user = null;
       }
-      debugPrint('Step 1 SUCCESS: User ID: ${user.id}');
+
+      if (user == null) {
+        try {
+          debugPrint('Step 1: Attempting Auth Sign Up...');
+          final response = await supabase.auth.signUp(
+            email: email,
+            password: password,
+            data: {
+              'full_name': fullName,
+              'phone': phone,
+              'role': role,
+            },
+          );
+          user = response.user;
+          debugPrint('Step 1 SUCCESS (New User): ${user?.id}');
+        } on AuthException catch (e) {
+          // Recovery: If user already exists, try to sign in to finish the process
+          if (e.message.toLowerCase().contains('already') || 
+              e.message.toLowerCase().contains('taken') ||
+              e.code == 'user_already_exists') {
+            debugPrint('Step 1 RECOVERY: User exists, attempting Sign In...');
+            try {
+              final signInRes = await supabase.auth.signInWithPassword(
+                email: email,
+                password: password,
+              );
+              user = signInRes.user;
+              debugPrint('Step 1 RECOVERY SUCCESS: ${user?.id}');
+            } on AuthException catch (signInError) {
+              // If sign in fails, then the email is taken by someone else (wrong password)
+              throw Exception('This email is already registered. Please use a different email or login.');
+            }
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      if (user == null) {
+        throw Exception('User creation failed - No session acquired.');
+      }
 
       // 2. Fetch FCM Token
       String? token;
@@ -47,20 +78,27 @@ class SignUpCubit extends Cubit<SignUpState> {
         debugPrint('Step 2 WARNING: FCM Token error: $e');
       }
 
-      // 3. Create Profile (Upsert to handle partial failure recovery)
-      debugPrint('Step 3: Creating profile...');
-      await supabase.from('profiles').upsert({
-        'id': user.id,
-        'full_name': fullName,
-        'phone': phone,
-        'role': role,
-        'gender': gender.toLowerCase(),
-        'tokens': token != null ? [token] : [],
-      });
+      // 3. Create Profile (Upsert to handle recovery)
+      debugPrint('Step 3: Syncing profile...');
+      try {
+        await supabase.from('profiles').upsert({
+          'id': user.id,
+          'full_name': fullName,
+          'phone': phone,
+          'role': role.toLowerCase(),
+          'gender': gender.toLowerCase(),
+          'tokens': token != null ? [token] : [],
+        });
+      } on PostgrestException catch (e) {
+        if (e.message.toLowerCase().contains('phone') && e.message.toLowerCase().contains('unique')) {
+           throw Exception('This phone number is already registered with another account.');
+        }
+        rethrow;
+      }
 
       // 4. Role-specific additional logic
       if (role.toLowerCase() == 'student') {
-        debugPrint('Step 4: Creating student record...');
+        debugPrint('Step 4: Syncing student record...');
         await supabase.from('students').upsert({
           'id': user.id,
           'gender': gender.toLowerCase(),
@@ -77,7 +115,7 @@ class SignUpCubit extends Cubit<SignUpState> {
       emit(state.copyWith(isLoading: false, errorMessage: 'Database Error: ${e.message}'));
     } catch (e) {
       debugPrint('--- SIGN UP TRACKING UNEXPECTED ERROR: $e ---');
-      emit(state.copyWith(isLoading: false, errorMessage: 'Unexpected Error: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString().replaceAll('Exception: ', '')));
     }
   }
 }

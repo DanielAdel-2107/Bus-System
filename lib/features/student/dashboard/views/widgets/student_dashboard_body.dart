@@ -324,23 +324,39 @@ class StudentDashboardBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.kPrimaryColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      booking["status"],
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.kPrimaryColor,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.kPrimaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          booking["status"],
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.kPrimaryColor,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (booking['distance'] != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          "${(booking['distance'] as double).toStringAsFixed(1)} km away",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -554,14 +570,15 @@ class StudentDashboardBody extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         SizedBox(
-          height: 180,
+          height: 195,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: lines.length,
             itemBuilder: (context, index) {
               final line = lines[index];
-              return _buildLineCard(context, line, index);
+              final distance = (context.read<StudentDashboardCubit>().state as StudentDashboardLoaded).lineDistances[line['name']];
+              return _buildLineCard(context, line, index, distance);
             },
           ),
         ),
@@ -569,7 +586,7 @@ class StudentDashboardBody extends StatelessWidget {
     );
   }
 
-  Widget _buildLineCard(BuildContext context, Map<String, dynamic> line, int index) {
+  Widget _buildLineCard(BuildContext context, Map<String, dynamic> line, int index, double? distance) {
     return Container(
       width: 160,
       margin: const EdgeInsets.only(right: 20),
@@ -627,11 +644,11 @@ class StudentDashboardBody extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                "View Trips",
+                distance != null ? "${distance.toStringAsFixed(1)} km away" : "View Trips",
                 style: GoogleFonts.poppins(
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  color: distance != null ? (line['color'] as Color) : AppColors.textSecondary,
                 ),
               ),
             ],
